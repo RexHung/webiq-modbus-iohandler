@@ -284,23 +284,52 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
       return write_str(outJson, outSize, arr.dump()) ? 0 : 0;
     }
   }
+  if (ic.function == 2) {
+    int count = ic.count > 0 ? ic.count : 1;
+    if (count == 1) {
+      std::uint8_t v = 0; int rc = ctx->client->read_discrete_inputs(ic.unit_id, ic.address, 1, &v);
+      if (rc != 0) return rc;
+      return write_str(outJson, outSize, v ? "true" : "false") ? 0 : 0;
+    } else {
+      std::vector<std::uint8_t> buf(count);
+      int rc = ctx->client->read_discrete_inputs(ic.unit_id, ic.address, count, buf.data());
+      if (rc != 0) return rc;
+      json arr = json::array();
+      for (int i = 0; i < count; ++i) arr.push_back(buf[i] != 0);
+      return write_str(outJson, outSize, arr.dump()) ? 0 : 0;
+    }
+  }
   if (ic.function == 3) {
-    if (ic.type == "float" || ic.count >= 2) {
-      std::uint16_t rr[2] = {0,0}; int need = 2;
-      int rc = ctx->client->read_holding_regs(ic.unit_id, ic.address, need, rr);
+    if (ic.type == "float") {
+      std::uint16_t rr[2] = {0,0};
+      int rc = ctx->client->read_holding_regs(ic.unit_id, ic.address, 2, rr);
       if (rc != 0) return rc;
       std::uint32_t u = wiq::join_u32(rr[0], rr[1], ic.swap_words);
       float f; std::memcpy(&f, &u, 4);
       std::string s = std::to_string(static_cast<double>(f));
       (void)write_str(outJson, outSize, s);
       return 0;
-    } else {
+    }
+    int need = ic.count > 0 ? ic.count : 1;
+    if (need == 1) {
       std::uint16_t r = 0; int rc = ctx->client->read_holding_regs(ic.unit_id, ic.address, 1, &r);
       if (rc != 0) return rc;
-      double val = wiq::apply_scale(static_cast<int16_t>(r), ic.scale, ic.offset);
-      std::string s = std::to_string(val);
-      (void)write_str(outJson, outSize, s);
+      if (ic.type == "int16") {
+        double val = wiq::apply_scale(static_cast<int16_t>(r), ic.scale, ic.offset);
+        std::string s = std::to_string(val);
+        (void)write_str(outJson, outSize, s);
+      } else {
+        std::string s = std::to_string(static_cast<unsigned>(r));
+        (void)write_str(outJson, outSize, s);
+      }
       return 0;
+    } else {
+      std::vector<std::uint16_t> rr(need);
+      int rc = ctx->client->read_holding_regs(ic.unit_id, ic.address, need, rr.data());
+      if (rc != 0) return rc;
+      json arr = json::array();
+      for (int i = 0; i < need; ++i) arr.push_back(rr[i]);
+      return write_str(outJson, outSize, arr.dump()) ? 0 : 0;
     }
   }
   if (ic.function == 4) {
@@ -352,6 +381,7 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
     if (!v.is_array()) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
     int count = static_cast<int>(v.size());
     if (count <= 0) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
+    if (ic.count > 0 && count != ic.count) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
     std::vector<std::uint8_t> buf(count);
     for (int i = 0; i < count; ++i) {
       const auto& e = v[i];
@@ -379,10 +409,13 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
       return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr);
     } else if (v.is_array()) {
       int count = static_cast<int>(v.size()); if (count <= 0) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
+      if (ic.count > 0 && count != ic.count) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
       std::vector<std::uint16_t> regs(count);
       for (int i = 0; i < count; ++i) {
         if (!v[i].is_number_integer()) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
-        int x = v[i].get<int>(); regs[i] = static_cast<std::uint16_t>(x & 0xFFFF);
+        long long x = v[i].get<long long>();
+        if (x < 0 || x > 65535) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+        regs[i] = static_cast<std::uint16_t>(x);
       }
       return ctx->client->write_multiple_regs(ic.unit_id, ic.address, count, regs.data());
     } else {

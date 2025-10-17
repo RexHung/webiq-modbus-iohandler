@@ -83,6 +83,22 @@ if(BUILD_TESTING)
   target_link_libraries(test_config_invalid PRIVATE ioh_modbus)
   add_test(NAME unit_config_invalid COMMAND test_config_invalid)
 
+  add_executable(test_api_fc2 tests/unit/test_api_fc2.cpp)
+  target_link_libraries(test_api_fc2 PRIVATE ioh_modbus)
+  add_test(NAME unit_api_fc2 COMMAND test_api_fc2)
+
+  add_executable(test_api_fc3_array tests/unit/test_api_fc3_array.cpp)
+  target_link_libraries(test_api_fc3_array PRIVATE ioh_modbus)
+  add_test(NAME unit_api_fc3_array COMMAND test_api_fc3_array)
+
+  add_executable(test_api_fc15_bad_array tests/unit/test_api_fc15_bad_array.cpp)
+  target_link_libraries(test_api_fc15_bad_array PRIVATE ioh_modbus)
+  add_test(NAME unit_api_fc15_bad_array COMMAND test_api_fc15_bad_array)
+
+  add_executable(test_api_fc16_bad_array tests/unit/test_api_fc16_bad_array.cpp)
+  target_link_libraries(test_api_fc16_bad_array PRIVATE ioh_modbus)
+  add_test(NAME unit_api_fc16_bad_array COMMAND test_api_fc16_bad_array)
+
   # E2E integration test binary
   add_executable(test_e2e tests/integration/test_e2e.cpp)
   target_include_directories(test_e2e PRIVATE include)
