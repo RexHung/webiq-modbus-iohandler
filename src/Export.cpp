@@ -145,6 +145,11 @@ static void split_u32(std::uint32_t v, bool swap_words, std::uint16_t& hi, std::
   if (swap_words) { hi = l; lo = h; } else { hi = h; lo = l; }
 }
 
+static std::uint64_t join_u64_be(const std::uint16_t r[4]) {
+  return (std::uint64_t(r[0]) << 48) | (std::uint64_t(r[1]) << 32) |
+         (std::uint64_t(r[2]) << 16) | std::uint64_t(r[3]);
+}
+
 static double apply_scale(double raw, double scale, double offset) { return raw * scale + offset; }
 static double unscale(double scaled, double scale, double offset) { return (scale == 0.0) ? 0.0 : (scaled - offset) / scale; }
 
@@ -220,6 +225,10 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
     if ((ic.function == 1 || ic.function == 2 || ic.function == 5 || ic.function == 15) && ic.type != "bool") return nullptr;
     if ((ic.function == 3 || ic.function == 4 || ic.function == 6 || ic.function == 16) && ic.type == "bool") return nullptr;
     if ((ic.type == std::string("float")) && ic.count < 2 && (ic.function == 3 || ic.function == 4 || ic.function == 16)) ic.count = 2;
+    if ((ic.type == std::string("double")) && (ic.function == 3 || ic.function == 4 || ic.function == 16)) {
+      if (ic.count < 4) ic.count = 4;
+    }
+    if ((ic.type == std::string("double")) && ic.function == 6) return nullptr; // single reg not allowed for double
 
     ctx->items.emplace(ic.name, ic);
   }
@@ -309,6 +318,15 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
       std::string s = std::to_string(static_cast<double>(f));
       (void)write_str(outJson, outSize, s);
       return 0;
+    } else if (ic.type == "double") {
+      std::uint16_t rr[4] = {0,0,0,0};
+      int rc = ctx->client->read_holding_regs(ic.unit_id, ic.address, 4, rr);
+      if (rc != 0) return rc;
+      std::uint64_t u = wiq::join_u64_be(rr);
+      double d; std::memcpy(&d, &u, 8);
+      std::string s = std::to_string(d);
+      (void)write_str(outJson, outSize, s);
+      return 0;
     }
     int need = ic.count > 0 ? ic.count : 1;
     if (need == 1) {
@@ -337,6 +355,14 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
     std::vector<std::uint16_t> rr(need);
     int rc = ctx->client->read_input_regs(ic.unit_id, ic.address, need, rr.data());
     if (rc != 0) return rc;
+    if (ic.type == "double" && need >= 4) {
+      std::uint16_t tmp[4] = { rr[0], rr.size()>1?rr[1]:0, rr.size()>2?rr[2]:0, rr.size()>3?rr[3]:0 };
+      std::uint64_t u = wiq::join_u64_be(tmp);
+      double d; std::memcpy(&d, &u, 8);
+      std::string s = std::to_string(d);
+      (void)write_str(outJson, outSize, s);
+      return 0;
+    }
     if (ic.type == "float" || need == 2) {
       // interpret first 2 regs as float
       std::uint32_t u = wiq::join_u32(rr[0], rr.size() > 1 ? rr[1] : 0, ic.swap_words);
