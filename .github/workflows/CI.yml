@@ -17,25 +17,97 @@ jobs:
   # - 可在 Windows / Ubuntu 上各跑一次
   # ------------------------------------------
   unit:
-    name: Unit (${{ matrix.os }}, WITH_TESTS=${{ matrix.with_tests }})
+    name: Unit (${{ matrix.os }}, arch=${{ matrix.arch }}, WITH_TESTS=${{ matrix.with_tests }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
+        arch: [x86_64, i386, armhf, arm64, win64, win32]
         with_tests: [ON, OFF]   # ⬅️ 這裡切換是否建測試目標
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure (WITH_LIBMODBUS=OFF)
+      # Linux: install toolchains as needed
+      - name: Install cross/multilib deps (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          case "${{ matrix.arch }}" in \
+            i386) \
+              sudo dpkg --add-architecture i386; \
+              sudo apt-get update; \
+              sudo apt-get install -y g++-multilib libc6:i386 libstdc++6:i386 ;; \
+            armhf) sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf qemu-user qemu-user-static binfmt-support ;; \
+            arm64) sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-user qemu-user-static binfmt-support ;; \
+            *) ;; \
+          esac
+
+      # Configure by arch/OS
+      - name: Configure (Linux x86_64)
+        if: runner.os == 'Linux' && matrix.arch == 'x86_64'
         run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (Linux i386)
+        if: runner.os == 'Linux' && matrix.arch == 'i386'
+        run: |
+          cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
+
+      - name: Configure (Linux armhf)
+        if: runner.os == 'Linux' && matrix.arch == 'armhf'
+        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/armhf.cmake
+
+      - name: Configure (Linux arm64)
+        if: runner.os == 'Linux' && matrix.arch == 'arm64'
+        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm64.cmake
+
+      - name: Configure (Windows x64)
+        if: runner.os == 'Windows' && matrix.arch == 'win64'
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (Windows x86)
+        if: runner.os == 'Windows' && matrix.arch == 'win32'
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A Win32 -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Run unit tests when WITH_TESTS=ON
-        if: matrix.with_tests == 'ON'
-        run: ctest --test-dir build --output-on-failure
+      - name: Set unit test regex (Linux)
+        if: matrix.with_tests == 'ON' && runner.os == 'Linux'
+        run: |
+          case "${{ matrix.arch }}" in \
+            x86_64|i386) echo "CTEST_REGEX=^unit_.*" >> $GITHUB_ENV ;; \
+            armhf|arm64) echo "CTEST_REGEX=^unit_(stub|codec|config_invalid|api_float_swap|api_coils_array)$" >> $GITHUB_ENV ;; \
+            *) echo "CTEST_REGEX=^unit_.*" >> $GITHUB_ENV ;; \
+          esac
+
+      - name: Set unit test regex (Windows)
+        if: matrix.with_tests == 'ON' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if ($env:RUNNER_OS -eq 'Windows') { $regex = '^unit_.*' } else { $regex = '^unit_.*' }
+          "CTEST_REGEX=$regex" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Run unit tests (Linux x86_64/i386, Windows x64/x86)
+        if: matrix.with_tests == 'ON' && ((runner.os == 'Linux' && (matrix.arch == 'x86_64' || matrix.arch == 'i386')) || (runner.os == 'Windows' && (matrix.arch == 'win64' || matrix.arch == 'win32')))
+        run: ctest --test-dir build -R "$CTEST_REGEX" --output-on-failure --timeout 60
+
+      - name: Run unit tests under QEMU (Linux ARM)
+        if: matrix.with_tests == 'ON' && runner.os == 'Linux' && (matrix.arch == 'armhf' || matrix.arch == 'arm64')
+        env:
+          CTEST_PARALLEL_LEVEL: 1
+        run: ctest --test-dir build -R "$CTEST_REGEX" --output-on-failure --timeout 180
+
+      - name: Upload unit test logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-logs-unit-${{ matrix.os }}-${{ matrix.arch }}-tests_${{ matrix.with_tests }}
+          path: |
+            build/Testing
+            build/LastTest.log
+            build/**/LastTest.log
 
   # ------------------------------------------------------
   # Integration（libmodbus + Modbus TCP 模擬器 via PORT）
@@ -43,32 +115,93 @@ jobs:
   # - WITH_TESTS 固定 ON（需要建 test_e2e）
   # ------------------------------------------------------
   integration:
-    name: Integration (port=${{ matrix.port }})
-    runs-on: ubuntu-latest
+    name: Integration (${{ matrix.os }}, port=${{ matrix.port }})
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
-        port: [1502, 1602, 1702]
+        os: [ubuntu-latest, windows-latest]
+        port: [1502, 1503]
     env:
       PORT: ${{ matrix.port }}
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies (libmodbus + pymodbus)
+      - name: Set up Python 3.x
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install pymodbus
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pymodbus
+
+      # Linux deps: libmodbus via apt
+      - name: Install libmodbus (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libmodbus-dev python3 python3-pip
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pymodbus
+          sudo apt-get install -y libmodbus-dev
 
-      - name: Start Modbus TCP simulator
+      # Windows deps: libmodbus via vcpkg
+      - name: Set up vcpkg (Windows)
+        if: runner.os == 'Windows'
+        uses: microsoft/vcpkg-action@v1
+
+      - name: Cache vcpkg artifacts (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.VCPKG_ROOT }}\installed
+            ${{ env.VCPKG_ROOT }}\downloads
+          key: vcpkg-${{ runner.os }}-libmodbus
+          restore-keys: |
+            vcpkg-${{ runner.os }}-
+
+      - name: Install libmodbus with vcpkg (Windows)
+        if: runner.os == 'Windows'
+        run: vcpkg install libmodbus:x64-windows
+
+      - name: Start Modbus TCP simulator (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           echo "Starting simulator on port $PORT"
-          python3 tests/integration/modbus_sim.py &
-          sleep 1
+          python tests/integration/modbus_sim.py &
+          # Probe readiness for up to ~20s using bash /dev/tcp
+          for i in {1..20}; do
+            sleep 1
+            if (echo > /dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
+              echo "Simulator is ready on port $PORT"; break
+            fi
+          done
+          if ! (echo > /dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
+            echo "ERROR: Simulator not reachable on port $PORT"; exit 1
+          fi
 
-      - name: Prepare CI config (uses $PORT)
+      - name: Start Modbus TCP simulator (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "Starting simulator on port $env:PORT"
+          Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py'
+          # Longer warm-up and readiness probe on Windows
+          $deadline = (Get-Date).AddSeconds(25)
+          $ok = $false
+          do {
+            Start-Sleep -Seconds 1
+            try {
+              $t = Test-NetConnection -ComputerName 127.0.0.1 -Port $env:PORT -WarningAction SilentlyContinue
+              if ($t.TcpTestSucceeded) { $ok = $true }
+            } catch { }
+          } until ($ok -or (Get-Date) -gt $deadline)
+          if (-not $ok) { Write-Error "Simulator not reachable on port $env:PORT"; exit 1 }
+
+      - name: Prepare CI config (Ubuntu)
+        if: runner.os == 'Linux'
         run: |
           mkdir -p config
           cat > config/ci.modbus.json <<JSON
@@ -83,11 +216,47 @@ jobs:
           }
           JSON
 
-      - name: Configure (WITH_LIBMODBUS=ON, WITH_TESTS=ON)
+      - name: Prepare CI config (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path config | Out-Null
+          @"
+          {
+            "transport": "tcp",
+            "tcp": { "host": "127.0.0.1", "port": $env:PORT, "timeout_ms": 1000 },
+            "items": [
+              { "name": "coil.run",      "unit_id": 1, "function": 1,  "address": 10,  "type": "bool",  "poll_ms": 100 },
+              { "name": "holding.temp",  "unit_id": 1, "function": 3,  "address": 0,   "type": "int16", "scale": 0.1, "poll_ms": 100 },
+              { "name": "ai.flow",       "unit_id": 1, "function": 4,  "address": 100, "type": "float", "poll_ms": 100, "swap_words": false }
+            ]
+          }
+          "@ | Out-File -FilePath config/ci.modbus.json -Encoding utf8 -Force
+
+      - name: Configure (Ubuntu, WITH_LIBMODBUS=ON, WITH_TESTS=ON)
+        if: runner.os == 'Linux'
         run: cmake -S . -B build -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Configure (Windows, WITH_LIBMODBUS=ON, WITH_TESTS=ON)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -S . -B build -A x64 \
+            -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake
 
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Run E2E integration test
-        run: ./build/tests/integration/test_e2e --config ./config/ci.modbus.json
+      - name: Run E2E integration test (ctest -R e2e)
+        run: ctest --test-dir build -R e2e --output-on-failure --timeout 120
+
+      - name: Upload integration logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-logs-integration-${{ matrix.os }}-port_${{ matrix.port }}
+          path: |
+            build/Testing
+            build/LastTest.log
+            build/**/LastTest.log

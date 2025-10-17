@@ -1,0 +1,9 @@
+{
+  "transport": "tcp",
+  "tcp": { "host": "127.0.0.1", "port": 1502, "timeout_ms": 1000 },
+  "items": [
+    { "name": "coil.run",     "unit_id": 1, "function": 1,  "address": 10,  "type": "bool",  "poll_ms": 100 },
+    { "name": "holding.temp", "unit_id": 1, "function": 3,  "address": 0,   "type": "int16", "scale": 0.1, "offset": 0.0, "poll_ms": 200 },
+    { "name": "ai.flow",      "unit_id": 1, "function": 4,  "address": 100, "count": 2,     "type": "float", "swap_words": false, "poll_ms": 250 }
+  ]
+}

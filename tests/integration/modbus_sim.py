@@ -2,7 +2,7 @@
 from pymodbus.server import StartTcpServer
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
 from pymodbus.datastore import ModbusSequentialDataBlock
-from threading import Thread
+import os
 
 # 初始資料：
 #  - coils[10] = 0 (FC1/5)     -> 測試寫入/讀取 coil.run

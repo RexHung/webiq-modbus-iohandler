@@ -106,6 +106,12 @@ ctest --output-on-failure
 # 於專案根目錄
 python3 tests/integration/modbus_sim.py &
 # 預設監聽 127.0.0.1:1502
+
+# 也可以環境變數覆寫 PORT（便於並行測試）
+# Linux/macOS:
+PORT=1503 python3 tests/integration/modbus_sim.py &
+# Windows (PowerShell):
+$env:PORT=1503; python tests/integration/modbus_sim.py
 ```
 
 模擬器預設資料（建議值，可在 `modbus_sim.py` 調整）：
@@ -204,3 +210,15 @@ add_test(NAME e2e COMMAND test_e2e --config ${CMAKE_SOURCE_DIR}/config/ci.modbus
 ---
 
 > 註：若你要加上 RTU 整合測試，可另行在 Runner 上接 USB-RS485（或使用虛擬串口環境）並加一個 `modbus_rtu_sim` 腳本與對應 `ci.modbus.rtu.json`；流程與 TCP 類似，但因硬體依賴，通常僅在本機或專用硬體 Runner 上跑。
+
+---
+
+## 9) RTU 測試與 Stub 策略（建議）
+
+- 在 `WITH_LIBMODBUS=OFF` 或 CI 缺少硬體時，RTU 相關單元測試以 Stub 實作模擬：
+  - 以記憶體模型代表寄存器/線圈；模擬超時/CRC/Frame 錯誤；
+  - 驗證功能碼 FC1/2/3/4/5/6/15/16 的引數檢查與資料編解碼（含 `scale/offset/swap_words`）。
+- 若需在 CI 驗證 RTU，可考慮：
+  - Linux 使用 `socat` 建虛擬串口配對，或跑容器化虛擬 RTU 模擬器；
+  - Windows 使用 com0com 建虛擬 COM；
+  - 提供 `tests/integration/modbus_rtu_sim.py` 與 `config/ci.modbus.rtu.json`（非必須）。

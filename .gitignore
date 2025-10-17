@@ -42,3 +42,14 @@
 
 # === AI agent local data ===
 .codex/
+
+# SDK binaries / installers (not tracked)
+doc/sdk/**/*.dll
+doc/sdk/**/*.so
+doc/sdk/**/*.dylib
+doc/sdk/**/*.lib
+doc/sdk/**/*.exe
+doc/sdk/**/*installer*
+doc/sdk/**/*/bin/
+doc/sdk/**/*/lib/
+doc/sdk/**/*/tools/

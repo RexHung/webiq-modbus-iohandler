@@ -1,0 +1,16 @@
+{
+  "transport": "rtu",
+  "rtu": {
+    "port": "/dev/ttyUSB0",
+    "baud": 9600,
+    "parity": "N",
+    "data_bits": 8,
+    "stop_bits": 1,
+    "timeout_ms": 1000
+  },
+  "items": [
+    { "name": "coil.start",   "unit_id": 1, "function": 1,  "address": 5,   "type": "bool",  "poll_ms": 200 },
+    { "name": "hr.speed",     "unit_id": 1, "function": 3,  "address": 2,   "type": "uint16", "scale": 1.0, "offset": 0.0, "poll_ms": 200 },
+    { "name": "hr.temp_f",    "unit_id": 1, "function": 3,  "address": 20,  "count": 2, "type": "float", "swap_words": true, "poll_ms": 300 }
+  ]
+}

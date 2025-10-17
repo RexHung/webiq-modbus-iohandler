@@ -58,6 +58,31 @@ include(CTest)
 if(BUILD_TESTING)
   enable_testing()
 
+  # Unit tests (stub, no external deps)
+  add_executable(test_stub tests/unit/test_stub.cpp)
+  target_include_directories(test_stub PRIVATE include)
+  target_link_libraries(test_stub PRIVATE ioh_modbus)
+  add_test(NAME unit_stub COMMAND test_stub)
+
+  add_executable(test_codec tests/unit/test_codec.cpp)
+  add_test(NAME unit_codec COMMAND test_codec)
+
+  add_executable(test_scale_zero tests/unit/test_scale_zero.cpp)
+  target_link_libraries(test_scale_zero PRIVATE ioh_modbus)
+  add_test(NAME unit_scale_zero COMMAND test_scale_zero)
+
+  add_executable(test_api_float_swap tests/unit/test_api_float_swap.cpp)
+  target_link_libraries(test_api_float_swap PRIVATE ioh_modbus)
+  add_test(NAME unit_api_float_swap COMMAND test_api_float_swap)
+
+  add_executable(test_api_coils_array tests/unit/test_api_coils_array.cpp)
+  target_link_libraries(test_api_coils_array PRIVATE ioh_modbus)
+  add_test(NAME unit_api_coils_array COMMAND test_api_coils_array)
+
+  add_executable(test_config_invalid tests/unit/test_config_invalid.cpp)
+  target_link_libraries(test_config_invalid PRIVATE ioh_modbus)
+  add_test(NAME unit_config_invalid COMMAND test_config_invalid)
+
   # E2E integration test binary
   add_executable(test_e2e tests/integration/test_e2e.cpp)
   target_include_directories(test_e2e PRIVATE include)
