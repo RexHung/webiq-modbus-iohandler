@@ -99,6 +99,18 @@ if(BUILD_TESTING)
   target_link_libraries(test_api_fc16_bad_array PRIVATE ioh_modbus)
   add_test(NAME unit_api_fc16_bad_array COMMAND test_api_fc16_bad_array)
 
+  add_executable(test_api_int16_scale_bounds tests/unit/test_api_int16_scale_bounds.cpp)
+  target_link_libraries(test_api_int16_scale_bounds PRIVATE ioh_modbus)
+  add_test(NAME unit_api_int16_scale_bounds COMMAND test_api_int16_scale_bounds)
+
+  add_executable(test_api_float_nonfinite tests/unit/test_api_float_nonfinite.cpp)
+  target_link_libraries(test_api_float_nonfinite PRIVATE ioh_modbus)
+  add_test(NAME unit_api_float_nonfinite COMMAND test_api_float_nonfinite)
+
+  add_executable(test_api_fc4_array tests/unit/test_api_fc4_array.cpp)
+  target_link_libraries(test_api_fc4_array PRIVATE ioh_modbus)
+  add_test(NAME unit_api_fc4_array COMMAND test_api_fc4_array)
+
   # E2E integration test binary
   add_executable(test_e2e tests/integration/test_e2e.cpp)
   target_include_directories(test_e2e PRIVATE include)

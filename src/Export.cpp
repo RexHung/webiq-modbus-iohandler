@@ -402,7 +402,9 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
   if (ic.function == 16 || (ic.function == 6 && ic.type == std::string("float"))) {
     // write multiple regs; for float accept single number -> 2 regs
     if (v.is_number()) {
-      float f = static_cast<float>(v.get<double>());
+      double dv = v.get<double>();
+      if (!std::isfinite(dv)) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+      float f = static_cast<float>(dv);
       std::uint32_t u; std::memcpy(&u, &f, 4);
       std::uint16_t hi, lo; wiq::split_u32(u, ic.swap_words, hi, lo);
       std::uint16_t rr[2] = {hi, lo};
