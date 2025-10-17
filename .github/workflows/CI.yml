@@ -22,9 +22,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        arch: [x86_64, i386, armhf, arm64, win64, win32]
-        with_tests: [ON, OFF]   # ⬅️ 這裡切換是否建測試目標
+        include:
+          # Linux arches
+          - { os: ubuntu-latest, arch: x86_64, with_tests: ON }
+          - { os: ubuntu-latest, arch: x86_64, with_tests: OFF }
+          - { os: ubuntu-latest, arch: i386,   with_tests: ON }
+          - { os: ubuntu-latest, arch: i386,   with_tests: OFF }
+          - { os: ubuntu-latest, arch: armhf,  with_tests: ON }
+          - { os: ubuntu-latest, arch: armhf,  with_tests: OFF }
+          - { os: ubuntu-latest, arch: arm64,  with_tests: ON }
+          - { os: ubuntu-latest, arch: arm64,  with_tests: OFF }
+          # Windows arches
+          - { os: windows-latest, arch: win64, with_tests: ON }
+          - { os: windows-latest, arch: win64, with_tests: OFF }
+          - { os: windows-latest, arch: win32, with_tests: ON }
+          - { os: windows-latest, arch: win32, with_tests: OFF }
     steps:
       - uses: actions/checkout@v4
 
@@ -165,6 +177,14 @@ jobs:
       - name: Install libmodbus with vcpkg (Windows)
         if: runner.os == 'Windows'
         run: vcpkg install libmodbus:x64-windows
+
+      - name: Add vcpkg runtime to PATH (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $bin = Join-Path $env:VCPKG_ROOT 'installed\x64-windows\bin'
+          echo "Adding $bin to PATH"
+          echo ("PATH=$env:PATH;" + $bin) | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Start Modbus TCP simulator (Ubuntu)
         if: runner.os == 'Linux'
