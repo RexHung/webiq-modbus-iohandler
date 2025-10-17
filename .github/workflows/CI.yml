@@ -1,0 +1,93 @@
+# This is a basic workflow to help you get started with Actions
+# 備註：
+# unit 工作只做編譯＋（可選）CTests（若暫未加測試程式，先允許通過）。
+# integration 工作安裝 libmodbus-dev，以 pymodbus 啟用 TCP 模擬器，然後跑我們的 E2E 測試程式。
+
+
+name: CI
+
+# Controls when the workflow will run
+on: [push, pull_request]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # ------------------------------------------
+  # Unit / Component（無外部依賴，stub backend）
+  # - 以 matrix 控制是否編譯測試 (WITH_TESTS=ON/OFF)
+  # - 可在 Windows / Ubuntu 上各跑一次
+  # ------------------------------------------
+  unit:
+    name: Unit (${{ matrix.os }}, WITH_TESTS=${{ matrix.with_tests }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        with_tests: [ON, OFF]   # ⬅️ 這裡切換是否建測試目標
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure (WITH_LIBMODBUS=OFF)
+        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Run unit tests when WITH_TESTS=ON
+        if: matrix.with_tests == 'ON'
+        run: ctest --test-dir build --output-on-failure
+
+  # ------------------------------------------------------
+  # Integration（libmodbus + Modbus TCP 模擬器 via PORT）
+  # - 以 matrix 同步開多個埠號做平行測試
+  # - WITH_TESTS 固定 ON（需要建 test_e2e）
+  # ------------------------------------------------------
+  integration:
+    name: Integration (port=${{ matrix.port }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        port: [1502, 1602, 1702]
+    env:
+      PORT: ${{ matrix.port }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (libmodbus + pymodbus)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libmodbus-dev python3 python3-pip
+          python3 -m pip install --upgrade pip
+          python3 -m pip install pymodbus
+
+      - name: Start Modbus TCP simulator
+        run: |
+          echo "Starting simulator on port $PORT"
+          python3 tests/integration/modbus_sim.py &
+          sleep 1
+
+      - name: Prepare CI config (uses $PORT)
+        run: |
+          mkdir -p config
+          cat > config/ci.modbus.json <<JSON
+          {
+            "transport": "tcp",
+            "tcp": { "host": "127.0.0.1", "port": $PORT, "timeout_ms": 1000 },
+            "items": [
+              { "name": "coil.run",      "unit_id": 1, "function": 1,  "address": 10,  "type": "bool",  "poll_ms": 100 },
+              { "name": "holding.temp",  "unit_id": 1, "function": 3,  "address": 0,   "type": "int16", "scale": 0.1, "poll_ms": 100 },
+              { "name": "ai.flow",       "unit_id": 1, "function": 4,  "address": 100, "type": "float", "poll_ms": 100, "swap_words": false }
+            ]
+          }
+          JSON
+
+      - name: Configure (WITH_LIBMODBUS=ON, WITH_TESTS=ON)
+        run: cmake -S . -B build -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Run E2E integration test
+        run: ./build/tests/integration/test_e2e --config ./config/ci.modbus.json

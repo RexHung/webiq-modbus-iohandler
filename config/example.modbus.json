@@ -1,0 +1,24 @@
+{
+  "transport": "tcp",
+  "tcp": {
+    "host": "192.168.0.10",
+    "port": 502
+  },
+  "items": [
+    {
+      "name": "coil.run",
+      "function": 1,
+      "address": 10,
+      "type": "bool",
+      "poll_ms": 200
+    },
+    {
+      "name": "holding.temp",
+      "function": 3,
+      "address": 0,
+      "type": "int16",
+      "scale": 0.1,
+      "poll_ms": 200
+    }
+  ]
+}
