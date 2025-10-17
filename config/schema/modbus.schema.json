@@ -53,7 +53,9 @@
           { "if": { "properties": { "function": { "enum": [3,4,6,16] } } },
             "then": { "not": { "properties": { "type": { "const": "bool" } }, "required": ["type"] } } },
           { "if": { "properties": { "type": { "const": "float" }, "function": { "enum": [3,4,16] } } },
-            "then": { "properties": { "count": { "minimum": 2 } }, "required": ["count"] } }
+            "then": { "properties": { "count": { "const": 2 } } } },
+          { "if": { "properties": { "type": { "const": "double" }, "function": { "enum": [3,4,16] } } },
+            "then": { "properties": { "count": { "const": 4 } } } }
         ]
       }
     }

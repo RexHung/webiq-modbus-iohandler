@@ -119,6 +119,14 @@ if(BUILD_TESTING)
   target_link_libraries(test_api_double_write_number PRIVATE ioh_modbus)
   add_test(NAME unit_api_double_write_number COMMAND test_api_double_write_number)
 
+  add_executable(test_api_double_word_order_dcba tests/unit/test_api_double_word_order_dcba.cpp)
+  target_link_libraries(test_api_double_word_order_dcba PRIVATE ioh_modbus)
+  add_test(NAME unit_api_double_word_order_dcba COMMAND test_api_double_word_order_dcba)
+
+  add_executable(test_config_invalid_float_count tests/unit/test_config_invalid_float_count.cpp)
+  target_link_libraries(test_config_invalid_float_count PRIVATE ioh_modbus)
+  add_test(NAME unit_config_invalid_float_count COMMAND test_config_invalid_float_count)
+
   add_executable(test_config_invalid_double tests/unit/test_config_invalid_double.cpp)
   target_link_libraries(test_config_invalid_double PRIVATE ioh_modbus)
   add_test(NAME unit_config_invalid_double COMMAND test_config_invalid_double)
