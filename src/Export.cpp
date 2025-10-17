@@ -150,6 +150,13 @@ static std::uint64_t join_u64_be(const std::uint16_t r[4]) {
          (std::uint64_t(r[2]) << 16) | std::uint64_t(r[3]);
 }
 
+static void split_u64_be(std::uint64_t u, std::uint16_t out[4]) {
+  out[0] = (u >> 48) & 0xFFFF;
+  out[1] = (u >> 32) & 0xFFFF;
+  out[2] = (u >> 16) & 0xFFFF;
+  out[3] = u & 0xFFFF;
+}
+
 static double apply_scale(double raw, double scale, double offset) { return raw * scale + offset; }
 static double unscale(double scaled, double scale, double offset) { return (scale == 0.0) ? 0.0 : (scaled - offset) / scale; }
 
@@ -430,11 +437,17 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
     if (v.is_number()) {
       double dv = v.get<double>();
       if (!std::isfinite(dv)) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
-      float f = static_cast<float>(dv);
-      std::uint32_t u; std::memcpy(&u, &f, 4);
-      std::uint16_t hi, lo; wiq::split_u32(u, ic.swap_words, hi, lo);
-      std::uint16_t rr[2] = {hi, lo};
-      return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr);
+      if (ic.type == std::string("double")) {
+        std::uint64_t u; std::memcpy(&u, &dv, 8);
+        std::uint16_t rr[4]; wiq::split_u64_be(u, rr);
+        return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 4, rr);
+      } else {
+        float f = static_cast<float>(dv);
+        std::uint32_t u; std::memcpy(&u, &f, 4);
+        std::uint16_t hi, lo; wiq::split_u32(u, ic.swap_words, hi, lo);
+        std::uint16_t rr[2] = {hi, lo};
+        return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr);
+      }
     } else if (v.is_array()) {
       int count = static_cast<int>(v.size()); if (count <= 0) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
       if (ic.count > 0 && count != ic.count) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
