@@ -264,13 +264,15 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           Write-Host "VCPKG_ROOT=$env:VCPKG_ROOT"
+          $toolchain = Join-Path $env:VCPKG_ROOT 'scripts/buildsystems/vcpkg.cmake'
+          Write-Host "TOOLCHAIN=$toolchain (exists=$([bool](Test-Path $toolchain)))"
           # Stream full cmake configure output to a file as well; enable detailed find debug
           $cfgLog = "build/_ci_cmake_configure.log"
           cmake -S . -B build -A x64 `
             -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON `
             -DCMAKE_BUILD_TYPE=Release `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake `
+            "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
             -DCMAKE_FIND_DEBUG_MODE=ON --log-level=VERBOSE 2>&1 | Tee-Object -FilePath $cfgLog
           $code = $LASTEXITCODE
           Write-Host "--- cmake configure log (tail) ---"
