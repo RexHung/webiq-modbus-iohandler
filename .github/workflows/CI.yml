@@ -142,7 +142,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest]
         port: [1502]
     env:
       PORT: ${{ matrix.port }}
@@ -167,8 +167,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libmodbus-dev
 
-      # Windows deps: libmodbus via vcpkg
-      # Windows integration temporarily disabled for triage
+      # Windows deps: libmodbus via vcpkg (bootstrap without actions)
+      - name: Bootstrap vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $root = "$env:USERPROFILE\vcpkg"
+          if (-not (Test-Path $root)) {
+            git clone --depth 1 https://github.com/microsoft/vcpkg $root
+            & $root\bootstrap-vcpkg.bat -disableMetrics
+          }
+          "VCPKG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Install libmodbus (Windows via vcpkg)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & $env:VCPKG_ROOT\vcpkg.exe install libmodbus:x64-windows
+          $bin = Join-Path $env:VCPKG_ROOT 'installed\x64-windows\bin'
+          "PATH=$env:PATH;$bin" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Start Modbus TCP simulator (Ubuntu)
         if: runner.os == 'Linux'
@@ -266,13 +283,13 @@ jobs:
         run: |
           $ok = $true
           try {
-            ctest --test-dir build -R e2e --output-on-failure --timeout 120
+            ctest --test-dir build -C Release -R e2e --output-on-failure --timeout 120
           } catch {
             $ok = $false
           }
           if (-not $ok) {
             Write-Host "Re-running E2E verbosely..."
-            ctest --test-dir build -R e2e -V --timeout 120
+            ctest --test-dir build -C Release -R e2e -V --timeout 120
             exit 1
           }
 
