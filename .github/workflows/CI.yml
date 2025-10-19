@@ -104,13 +104,13 @@ jobs:
         run: |
           $ok = $true
           try {
-            ctest --test-dir build -R "$env:CTEST_REGEX" --output-on-failure --timeout 60
+            ctest --test-dir build -C Release -R "$env:CTEST_REGEX" --output-on-failure --timeout 60
           } catch {
             $ok = $false
           }
           if (-not $ok) {
             Write-Host "Re-running unit tests verbosely..."
-            ctest --test-dir build -R "$env:CTEST_REGEX" -V --timeout 60
+            ctest --test-dir build -C Release -R "$env:CTEST_REGEX" -V --timeout 60
             exit 1
           }
 
