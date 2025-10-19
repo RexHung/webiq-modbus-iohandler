@@ -133,6 +133,26 @@ if(BUILD_TESTING)
   target_link_libraries(test_api_double_word_order_dcba PRIVATE ioh_modbus)
   add_test(NAME unit_api_double_word_order_dcba COMMAND $<TARGET_FILE:test_api_double_word_order_dcba>)
 
+  add_executable(test_api_double_word_order_abcd tests/unit/test_api_double_word_order_abcd.cpp)
+  target_link_libraries(test_api_double_word_order_abcd PRIVATE ioh_modbus)
+  add_test(NAME unit_api_double_word_order_abcd COMMAND $<TARGET_FILE:test_api_double_word_order_abcd>)
+
+  add_executable(test_api_double_word_order_badc tests/unit/test_api_double_word_order_badc.cpp)
+  target_link_libraries(test_api_double_word_order_badc PRIVATE ioh_modbus)
+  add_test(NAME unit_api_double_word_order_badc COMMAND $<TARGET_FILE:test_api_double_word_order_badc>)
+
+  add_executable(test_api_double_word_order_cdab tests/unit/test_api_double_word_order_cdab.cpp)
+  target_link_libraries(test_api_double_word_order_cdab PRIVATE ioh_modbus)
+  add_test(NAME unit_api_double_word_order_cdab COMMAND $<TARGET_FILE:test_api_double_word_order_cdab>)
+
+  add_executable(test_api_fc3_array_2 tests/unit/test_api_fc3_array_2.cpp)
+  target_link_libraries(test_api_fc3_array_2 PRIVATE ioh_modbus)
+  add_test(NAME unit_api_fc3_array_2 COMMAND $<TARGET_FILE:test_api_fc3_array_2>)
+
+  add_executable(test_api_fc4_array_2 tests/unit/test_api_fc4_array_2.cpp)
+  target_link_libraries(test_api_fc4_array_2 PRIVATE ioh_modbus)
+  add_test(NAME unit_api_fc4_array_2 COMMAND $<TARGET_FILE:test_api_fc4_array_2>)
+
   add_executable(test_config_invalid_float_count tests/unit/test_config_invalid_float_count.cpp)
   target_link_libraries(test_config_invalid_float_count PRIVATE ioh_modbus)
   add_test(NAME unit_config_invalid_float_count COMMAND $<TARGET_FILE:test_config_invalid_float_count>)
@@ -155,8 +175,10 @@ if(BUILD_TESTING)
       unit_stub unit_codec unit_scale_zero unit_api_float_swap unit_api_coils_array
       unit_config_invalid unit_api_fc2 unit_api_fc3_array unit_api_fc15_bad_array
       unit_api_fc16_bad_array unit_api_int16_scale_bounds unit_api_float_nonfinite
-      unit_api_fc4_array unit_api_double_read_array unit_api_double_write_number
-      unit_api_double_word_order_dcba unit_config_invalid_float_count unit_config_invalid_double e2e
+      unit_api_fc4_array unit_api_fc3_array_2 unit_api_fc4_array_2
+      unit_api_double_read_array unit_api_double_write_number
+      unit_api_double_word_order_dcba unit_api_double_word_order_abcd unit_api_double_word_order_badc unit_api_double_word_order_cdab
+      unit_config_invalid_float_count unit_config_invalid_double e2e
       PROPERTIES ENVIRONMENT "${_LD}"
     )
   elseif(WIN32)
@@ -165,8 +187,10 @@ if(BUILD_TESTING)
       unit_stub unit_codec unit_scale_zero unit_api_float_swap unit_api_coils_array
       unit_config_invalid unit_api_fc2 unit_api_fc3_array unit_api_fc15_bad_array
       unit_api_fc16_bad_array unit_api_int16_scale_bounds unit_api_float_nonfinite
-      unit_api_fc4_array unit_api_double_read_array unit_api_double_write_number
-      unit_api_double_word_order_dcba unit_config_invalid_float_count unit_config_invalid_double e2e
+      unit_api_fc4_array unit_api_fc3_array_2 unit_api_fc4_array_2
+      unit_api_double_read_array unit_api_double_write_number
+      unit_api_double_word_order_dcba unit_api_double_word_order_abcd unit_api_double_word_order_badc unit_api_double_word_order_cdab
+      unit_config_invalid_float_count unit_config_invalid_double e2e
       PROPERTIES ENVIRONMENT "${_PATH}"
     )
   endif()

@@ -35,6 +35,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Cache pip across jobs
+      - name: Cache pip (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+
+      - name: Install ccache (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
       # Linux: install toolchains as needed
       - name: Install cross/multilib deps (Linux)
         if: runner.os == 'Linux'
@@ -78,21 +92,21 @@ jobs:
       # Configure by arch/OS
       - name: Configure (Linux x86_64)
         if: runner.os == 'Linux' && matrix.arch == 'x86_64'
-        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
       - name: Configure (Linux i386)
         if: runner.os == 'Linux' && matrix.arch == 'i386'
         run: |
-          cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release \
+          cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache \
                 -DCMAKE_C_FLAGS=-m32 -DCMAKE_CXX_FLAGS=-m32
 
       - name: Configure (Linux armhf)
         if: runner.os == 'Linux' && matrix.arch == 'armhf'
-        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/armhf.cmake
+        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/armhf.cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
       - name: Configure (Linux arm64)
         if: runner.os == 'Linux' && matrix.arch == 'arm64'
-        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm64.cmake
+        run: cmake -S . -B build -DWITH_LIBMODBUS=OFF -DWITH_TESTS=${{ matrix.with_tests }} -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/arm64.cmake -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
       - name: Configure (Windows x64)
         if: runner.os == 'Windows' && matrix.arch == 'win64'
@@ -161,6 +175,16 @@ jobs:
             build/LastTest.log
             build/**/LastTest.log
 
+      # Cache ccache objects
+      - name: Cache ccache (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-${{ matrix.os }}-${{ matrix.arch }}-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ matrix.os }}-${{ matrix.arch }}-
+
   # ------------------------------------------------------
   # Integration（libmodbus + Modbus TCP 模擬器 via PORT）
   # - 以 matrix 同步開多個埠號做平行測試
@@ -182,6 +206,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # Cache pip for integration
+      - name: Cache pip (Linux)
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('**/requirements*.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+      - name: Cache pip (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: ~\AppData\Local\pip\Cache
+          key: pip-${{ runner.os }}
+          restore-keys: |
+            pip-${{ runner.os }}
 
       - name: Set up Python 3.x
         uses: actions/setup-python@v5
@@ -211,6 +253,18 @@ jobs:
             & $root\bootstrap-vcpkg.bat -disableMetrics
           }
           "VCPKG_ROOT=$root" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - name: Cache vcpkg installed (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            ${{ env.VCPKG_ROOT }}\installed\${{ matrix.triplet }}
+            ${{ env.VCPKG_ROOT }}\packages
+            ${{ env.VCPKG_ROOT }}\buildtrees
+          key: vcpkg-${{ matrix.triplet }}
+          restore-keys: |
+            vcpkg-${{ matrix.triplet }}
 
       - name: Install libmodbus (Windows via vcpkg)
         if: runner.os == 'Windows'
@@ -290,7 +344,7 @@ jobs:
 
       - name: Configure (Ubuntu, WITH_LIBMODBUS=ON, WITH_TESTS=ON)
         if: runner.os == 'Linux'
-        run: cmake -S . -B build -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_C_COMPILER_LAUNCHER=ccache
 
       - name: Configure (Windows, WITH_LIBMODBUS=ON, WITH_TESTS=ON)
         if: runner.os == 'Windows'
