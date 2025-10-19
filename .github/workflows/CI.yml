@@ -45,8 +45,14 @@ jobs:
               sudo dpkg --add-architecture i386; \
               sudo apt-get update; \
               sudo apt-get install -y g++-multilib libc6:i386 libstdc++6:i386 ;; \
-            armhf) sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf qemu-user qemu-user-static binfmt-support ;; \
-            arm64) sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-user qemu-user-static binfmt-support ;; \
+            armhf) \
+              sudo dpkg --add-architecture armhf; \
+              sudo apt-get update; \
+              sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf qemu-user qemu-user-static binfmt-support libc6:armhf libstdc++6:armhf ;; \
+            arm64) \
+              sudo dpkg --add-architecture arm64; \
+              sudo apt-get update; \
+              sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-user qemu-user-static binfmt-support libc6:arm64 libstdc++6:arm64 ;; \
             *) ;; \
           esac
 
@@ -388,7 +394,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-logs-${{ matrix.os }}-port_${{ matrix.port }}
+          name: integration-logs-${{ matrix.os }}-${{ matrix.arch }}-port_${{ matrix.port }}
           path: |
             build/_ci_cmake_configure.log
             build/CMakeFiles/CMakeError.log
