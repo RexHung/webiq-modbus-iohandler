@@ -58,80 +58,76 @@ include(CTest)
 if(BUILD_TESTING)
   enable_testing()
 
-  # Helper: wrap tests to set runtime library path for shared libs
-  set(_TEST_ENV
-    "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:ioh_modbus>:$ENV{LD_LIBRARY_PATH}"
-    "PATH=$<TARGET_FILE_DIR:ioh_modbus>;$ENV{PATH}"
-  )
+  # Helper: set runtime library path for shared libs via test ENVIRONMENT
 
   # Unit tests (stub, no external deps)
   add_executable(test_stub tests/unit/test_stub.cpp)
   target_include_directories(test_stub PRIVATE include)
   target_link_libraries(test_stub PRIVATE ioh_modbus)
-  add_test(NAME unit_stub COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_stub>)
+  add_test(NAME unit_stub COMMAND $<TARGET_FILE:test_stub>)
 
   add_executable(test_codec tests/unit/test_codec.cpp)
-  add_test(NAME unit_codec COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_codec>)
+  add_test(NAME unit_codec COMMAND $<TARGET_FILE:test_codec>)
 
   add_executable(test_scale_zero tests/unit/test_scale_zero.cpp)
   target_link_libraries(test_scale_zero PRIVATE ioh_modbus)
-  add_test(NAME unit_scale_zero COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_scale_zero>)
+  add_test(NAME unit_scale_zero COMMAND $<TARGET_FILE:test_scale_zero>)
 
   add_executable(test_api_float_swap tests/unit/test_api_float_swap.cpp)
   target_link_libraries(test_api_float_swap PRIVATE ioh_modbus)
-  add_test(NAME unit_api_float_swap COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_float_swap>)
+  add_test(NAME unit_api_float_swap COMMAND $<TARGET_FILE:test_api_float_swap>)
 
   add_executable(test_api_coils_array tests/unit/test_api_coils_array.cpp)
   target_link_libraries(test_api_coils_array PRIVATE ioh_modbus)
-  add_test(NAME unit_api_coils_array COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_coils_array>)
+  add_test(NAME unit_api_coils_array COMMAND $<TARGET_FILE:test_api_coils_array>)
 
   add_executable(test_config_invalid tests/unit/test_config_invalid.cpp)
   target_link_libraries(test_config_invalid PRIVATE ioh_modbus)
-  add_test(NAME unit_config_invalid COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_config_invalid>)
+  add_test(NAME unit_config_invalid COMMAND $<TARGET_FILE:test_config_invalid>)
 
   add_executable(test_api_fc2 tests/unit/test_api_fc2.cpp)
   target_link_libraries(test_api_fc2 PRIVATE ioh_modbus)
-  add_test(NAME unit_api_fc2 COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_fc2>)
+  add_test(NAME unit_api_fc2 COMMAND $<TARGET_FILE:test_api_fc2>)
 
   add_executable(test_api_fc3_array tests/unit/test_api_fc3_array.cpp)
   target_link_libraries(test_api_fc3_array PRIVATE ioh_modbus)
-  add_test(NAME unit_api_fc3_array COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_fc3_array>)
+  add_test(NAME unit_api_fc3_array COMMAND $<TARGET_FILE:test_api_fc3_array>)
 
   add_executable(test_api_fc15_bad_array tests/unit/test_api_fc15_bad_array.cpp)
   target_link_libraries(test_api_fc15_bad_array PRIVATE ioh_modbus)
-  add_test(NAME unit_api_fc15_bad_array COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_fc15_bad_array>)
+  add_test(NAME unit_api_fc15_bad_array COMMAND $<TARGET_FILE:test_api_fc15_bad_array>)
 
   add_executable(test_api_fc16_bad_array tests/unit/test_api_fc16_bad_array.cpp)
   target_link_libraries(test_api_fc16_bad_array PRIVATE ioh_modbus)
-  add_test(NAME unit_api_fc16_bad_array COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_fc16_bad_array>)
+  add_test(NAME unit_api_fc16_bad_array COMMAND $<TARGET_FILE:test_api_fc16_bad_array>)
 
   add_executable(test_api_int16_scale_bounds tests/unit/test_api_int16_scale_bounds.cpp)
   target_link_libraries(test_api_int16_scale_bounds PRIVATE ioh_modbus)
-  add_test(NAME unit_api_int16_scale_bounds COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_int16_scale_bounds>)
+  add_test(NAME unit_api_int16_scale_bounds COMMAND $<TARGET_FILE:test_api_int16_scale_bounds>)
 
   add_executable(test_api_float_nonfinite tests/unit/test_api_float_nonfinite.cpp)
   target_link_libraries(test_api_float_nonfinite PRIVATE ioh_modbus)
-  add_test(NAME unit_api_float_nonfinite COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_float_nonfinite>)
+  add_test(NAME unit_api_float_nonfinite COMMAND $<TARGET_FILE:test_api_float_nonfinite>)
 
   add_executable(test_api_fc4_array tests/unit/test_api_fc4_array.cpp)
   target_link_libraries(test_api_fc4_array PRIVATE ioh_modbus)
-  add_test(NAME unit_api_fc4_array COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_fc4_array>)
+  add_test(NAME unit_api_fc4_array COMMAND $<TARGET_FILE:test_api_fc4_array>)
 
   add_executable(test_api_double_read_array tests/unit/test_api_double_read_array.cpp)
   target_link_libraries(test_api_double_read_array PRIVATE ioh_modbus)
-  add_test(NAME unit_api_double_read_array COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_double_read_array>)
+  add_test(NAME unit_api_double_read_array COMMAND $<TARGET_FILE:test_api_double_read_array>)
 
   add_executable(test_api_double_write_number tests/unit/test_api_double_write_number.cpp)
   target_link_libraries(test_api_double_write_number PRIVATE ioh_modbus)
-  add_test(NAME unit_api_double_write_number COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_double_write_number>)
+  add_test(NAME unit_api_double_write_number COMMAND $<TARGET_FILE:test_api_double_write_number>)
 
   add_executable(test_api_double_word_order_dcba tests/unit/test_api_double_word_order_dcba.cpp)
   target_link_libraries(test_api_double_word_order_dcba PRIVATE ioh_modbus)
-  add_test(NAME unit_api_double_word_order_dcba COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_api_double_word_order_dcba>)
+  add_test(NAME unit_api_double_word_order_dcba COMMAND $<TARGET_FILE:test_api_double_word_order_dcba>)
 
   add_executable(test_config_invalid_float_count tests/unit/test_config_invalid_float_count.cpp)
   target_link_libraries(test_config_invalid_float_count PRIVATE ioh_modbus)
-  add_test(NAME unit_config_invalid_float_count COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_config_invalid_float_count>)
+  add_test(NAME unit_config_invalid_float_count COMMAND $<TARGET_FILE:test_config_invalid_float_count>)
 
   add_executable(test_config_invalid_double tests/unit/test_config_invalid_double.cpp)
   target_link_libraries(test_config_invalid_double PRIVATE ioh_modbus)
@@ -142,5 +138,28 @@ if(BUILD_TESTING)
   target_include_directories(test_e2e PRIVATE include)
   target_link_libraries(test_e2e PRIVATE ioh_modbus)
   add_test(NAME e2e
-           COMMAND ${CMAKE_COMMAND} -E env ${_TEST_ENV} $<TARGET_FILE:test_e2e> --config ${CMAKE_SOURCE_DIR}/config/ci.modbus.json)
+           COMMAND $<TARGET_FILE:test_e2e> --config ${CMAKE_SOURCE_DIR}/config/ci.modbus.json)
+
+  # Set runtime environment for all tests
+  if(UNIX)
+    set(_LD "LD_LIBRARY_PATH=$<TARGET_FILE_DIR:ioh_modbus>:$ENV{LD_LIBRARY_PATH}")
+    set_tests_properties(
+      unit_stub unit_codec unit_scale_zero unit_api_float_swap unit_api_coils_array
+      unit_config_invalid unit_api_fc2 unit_api_fc3_array unit_api_fc15_bad_array
+      unit_api_fc16_bad_array unit_api_int16_scale_bounds unit_api_float_nonfinite
+      unit_api_fc4_array unit_api_double_read_array unit_api_double_write_number
+      unit_api_double_word_order_dcba unit_config_invalid_float_count e2e
+      PROPERTIES ENVIRONMENT "${_LD}"
+    )
+  elseif(WIN32)
+    set(_PATH "PATH=$<TARGET_FILE_DIR:ioh_modbus>;$ENV{PATH}")
+    set_tests_properties(
+      unit_stub unit_codec unit_scale_zero unit_api_float_swap unit_api_coils_array
+      unit_config_invalid unit_api_fc2 unit_api_fc3_array unit_api_fc15_bad_array
+      unit_api_fc16_bad_array unit_api_int16_scale_bounds unit_api_float_nonfinite
+      unit_api_fc4_array unit_api_double_read_array unit_api_double_write_number
+      unit_api_double_word_order_dcba unit_config_invalid_float_count e2e
+      PROPERTIES ENVIRONMENT "${_PATH}"
+    )
+  endif()
 endif()
