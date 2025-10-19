@@ -38,17 +38,20 @@ if(WITH_LIBMODBUS)
   # Help CMake locate libmodbus when using vcpkg toolchain on Windows
   set(_VCPKG_INC "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
   set(_VCPKG_LIB "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/lib")
+  message(STATUS "WITH_LIBMODBUS=ON; VCPKG_ROOT='$ENV{VCPKG_ROOT}', TRIPLET='${VCPKG_TARGET_TRIPLET}'")
   find_path(LIBMODBUS_INCLUDE_DIR NAMES modbus/modbus.h modbus.h
             HINTS ${_VCPKG_INC})
   find_library(LIBMODBUS_LIBRARY NAMES modbus
                HINTS ${_VCPKG_LIB})
+  message(STATUS "LIBMODBUS_INCLUDE_DIR='${LIBMODBUS_INCLUDE_DIR}'")
+  message(STATUS "LIBMODBUS_LIBRARY='${LIBMODBUS_LIBRARY}'")
   if(LIBMODBUS_INCLUDE_DIR AND LIBMODBUS_LIBRARY)
     target_include_directories(ioh_modbus PRIVATE ${LIBMODBUS_INCLUDE_DIR} ${LIBMODBUS_INCLUDE_DIR}/modbus)
     target_compile_definitions(ioh_modbus PRIVATE WITH_LIBMODBUS=1)
     target_link_libraries(ioh_modbus PRIVATE ${LIBMODBUS_LIBRARY})
     message(STATUS "libmodbus enabled")
   else()
-    message(WARNING "libmodbus requested but not found; building with stub backend")
+    message(FATAL_ERROR "WITH_LIBMODBUS requested but libmodbus not found.\nInclude='${LIBMODBUS_INCLUDE_DIR}' lib='${LIBMODBUS_LIBRARY}'.\nVCPKG_ROOT='$ENV{VCPKG_ROOT}' TRIPLET='${VCPKG_TARGET_TRIPLET}'.")
   endif()
 endif()
 
