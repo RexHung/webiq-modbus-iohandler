@@ -195,3 +195,22 @@ if(BUILD_TESTING)
     )
   endif()
 endif()
+
+# ----------------
+# Install and packaging (CPack)
+# ----------------
+install(TARGETS ioh_modbus
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION lib
+  ARCHIVE DESTINATION lib)
+
+install(DIRECTORY include/ DESTINATION include)
+
+# Basic CPack configuration (archives)
+set(CPACK_PACKAGE_NAME "webiq-modbus-iohandler")
+set(CPACK_PACKAGE_VENDOR "WebIQ Modbus IOHandler")
+if(NOT DEFINED CPACK_PACKAGE_VERSION)
+  set(CPACK_PACKAGE_VERSION "0.2.0")
+endif()
+set(CPACK_GENERATOR "ZIP;TGZ")
+include(CPack)
