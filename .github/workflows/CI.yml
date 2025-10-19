@@ -280,15 +280,8 @@ jobs:
         run: |
           echo "Starting simulator on port $PORT"
           echo "Python version: $(python --version 2>&1)"
-          python - <<'PY'
-import sys
-try:
-    import pymodbus
-    print('pymodbus version:', getattr(pymodbus, '__version__', 'unknown'))
-except Exception as e:
-    print('import pymodbus failed:', e)
-    sys.exit(1)
-PY
+          python -c "import pymodbus, sys; print('pymodbus version:', getattr(pymodbus,'__version__','unknown'))" \
+            || { echo 'import pymodbus failed'; exit 1; }
           nohup python tests/integration/modbus_sim.py >/tmp/modbus_sim.log 2>&1 &
           SIM_PID=$!
           echo "simulator pid=$SIM_PID"
