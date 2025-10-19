@@ -47,6 +47,9 @@ jobs:
               sudo apt-get install -y g++-multilib libc6:i386 libstdc++6:i386 ;; \
             armhf) \
               sudo dpkg --add-architecture armhf; \
+              # Limit default ubuntu mirrors to native arch to avoid 404 for foreign arches
+              sudo sed -i -E 's/^deb ([^[])/deb [arch=amd64] \1/' /etc/apt/sources.list || true; \
+              for f in /etc/apt/sources.list.d/*.list; do sudo sed -i -E 's/^deb ([^[])/deb [arch=amd64] \1/' "$f" || true; done; \
               codename=$( . /etc/os-release && echo "$VERSION_CODENAME" ); \
               echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $codename main universe multiverse restricted" | sudo tee /etc/apt/sources.list.d/armhf-ports.list >/dev/null; \
               echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $codename-updates main universe multiverse restricted" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list >/dev/null; \
@@ -55,6 +58,8 @@ jobs:
               sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf qemu-user qemu-user-static binfmt-support libc6:armhf libstdc++6:armhf ;; \
             arm64) \
               sudo dpkg --add-architecture arm64; \
+              sudo sed -i -E 's/^deb ([^[])/deb [arch=amd64] \1/' /etc/apt/sources.list || true; \
+              for f in /etc/apt/sources.list.d/*.list; do sudo sed -i -E 's/^deb ([^[])/deb [arch=amd64] \1/' "$f" || true; done; \
               codename=$( . /etc/os-release && echo "$VERSION_CODENAME" ); \
               echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $codename main universe multiverse restricted" | sudo tee /etc/apt/sources.list.d/arm64-ports.list >/dev/null; \
               echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $codename-updates main universe multiverse restricted" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list >/dev/null; \
