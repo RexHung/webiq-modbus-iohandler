@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include "export.hpp"
 
 namespace wiq {
 
@@ -40,7 +41,7 @@ public:
 };
 
 // Factory for a simple in-memory stub client usable without libmodbus
-std::unique_ptr<IModbusClient> make_stub_client(
+WIQ_IOH_API std::unique_ptr<IModbusClient> make_stub_client(
   int coils_size = 200,
   int discrete_inputs_size = 200,
   int holding_regs_size = 200,
