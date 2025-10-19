@@ -266,18 +266,25 @@ jobs:
           Write-Host "VCPKG_ROOT=$env:VCPKG_ROOT"
           $toolchain = Join-Path $env:VCPKG_ROOT 'scripts/buildsystems/vcpkg.cmake'
           Write-Host "TOOLCHAIN=$toolchain (exists=$([bool](Test-Path $toolchain)))"
-          # Stream full cmake configure output to a file as well; enable detailed find debug
+          # First attempt: quiet configure
           $cfgLog = "build/_ci_cmake_configure.log"
           cmake -S . -B build -A x64 `
             -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON `
             -DCMAKE_BUILD_TYPE=Release `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
-            -DCMAKE_FIND_DEBUG_MODE=ON --log-level=VERBOSE 2>&1 | Tee-Object -FilePath $cfgLog
+            "-DCMAKE_TOOLCHAIN_FILE=$toolchain"
           $code = $LASTEXITCODE
-          Write-Host "--- cmake configure log (tail) ---"
-          Get-Content $cfgLog -ErrorAction SilentlyContinue | Select-Object -Last 400
           if ($code -ne 0) {
+            Write-Host "Configure failed. Retrying with verbose find debug..."
+            cmake -S . -B build -A x64 `
+              -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON `
+              -DCMAKE_BUILD_TYPE=Release `
+              -DVCPKG_TARGET_TRIPLET=x64-windows `
+              "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
+              -DCMAKE_FIND_DEBUG_MODE=ON --log-level=VERBOSE 2>&1 | Tee-Object -FilePath $cfgLog
+            $code2 = $LASTEXITCODE
+            Write-Host "--- cmake configure log (tail) ---"
+            if (Test-Path $cfgLog) { Get-Content $cfgLog | Select-Object -Last 400 }
             Write-Host "--- CMakeError.log (tail) ---"
             Get-Content build\CMakeFiles\CMakeError.log -ErrorAction SilentlyContinue | Select-Object -Last 200
             Write-Host "--- CMakeOutput.log (tail) ---"
@@ -286,10 +293,10 @@ jobs:
             Get-Content build\CMakeCache.txt -ErrorAction SilentlyContinue | Select-Object -Last 200
             Write-Host "--- build directory snapshot ---"
             Get-ChildItem -Recurse build | Select-Object -First 200
-            exit $code
+            exit $code2
           } else {
             Write-Host "Configure succeeded. Listing build directory:"
-            Get-ChildItem -Recurse build | Select-Object -First 200
+            Get-ChildItem -Recurse build | Select-Object -First 100
           }
 
       - name: Build (Windows)
