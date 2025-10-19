@@ -368,8 +368,12 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: ctest-logs-integration-${{ matrix.os }}-port_${{ matrix.port }}
+          name: integration-logs-${{ matrix.os }}-port_${{ matrix.port }}
           path: |
+            build/_ci_cmake_configure.log
+            build/CMakeFiles/CMakeError.log
+            build/CMakeFiles/CMakeOutput.log
+            build/CMakeCache.txt
             build/Testing
             build/LastTest.log
             build/**/LastTest.log
