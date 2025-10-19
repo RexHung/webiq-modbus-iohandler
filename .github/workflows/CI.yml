@@ -28,10 +28,8 @@ jobs:
           - { os: ubuntu-latest, arch: x86_64, with_tests: OFF }
           - { os: ubuntu-latest, arch: i386,   with_tests: ON }
           - { os: ubuntu-latest, arch: i386,   with_tests: OFF }
-          - { os: ubuntu-latest, arch: armhf,  with_tests: ON }
-          - { os: ubuntu-latest, arch: armhf,  with_tests: OFF }
-          - { os: ubuntu-latest, arch: arm64,  with_tests: ON }
-          - { os: ubuntu-latest, arch: arm64,  with_tests: OFF }
+          - { os: ubuntu-latest, arch: armhf,  with_tests: OFF }  # compile-only under QEMU
+          - { os: ubuntu-latest, arch: arm64,  with_tests: OFF }  # compile-only under QEMU
           # Windows arches
           - { os: windows-latest, arch: win64, with_tests: ON }
           - { os: windows-latest, arch: win64, with_tests: OFF }
@@ -111,8 +109,8 @@ jobs:
           CTEST_PARALLEL_LEVEL: 1
         run: ctest --test-dir build -R "$CTEST_REGEX" --output-on-failure --timeout 180
 
-      - name: Upload unit test logs on failure
-        if: failure()
+      - name: Upload unit test logs (always)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ctest-logs-unit-${{ matrix.os }}-${{ matrix.arch }}-tests_${{ matrix.with_tests }}
@@ -271,8 +269,23 @@ jobs:
       - name: Run E2E integration test (ctest -R e2e)
         run: ctest --test-dir build -R e2e --output-on-failure --timeout 120
 
-      - name: Upload integration logs on failure
-        if: failure()
+      - name: Show dependency info (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          echo "-- ldd test_e2e --" || true
+          ldd ./build/tests/integration/test_e2e || true
+          echo "-- locate and ldd ioh_modbus --" || true
+          find build -type f -name "libioh_modbus*.so" -print -exec ldd {} \; || true
+
+      - name: Show PATH and files (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "PATH=$env:PATH"
+          Get-ChildItem -Recurse build -Filter ioh_modbus*.dll | Select-Object -First 10 -ExpandProperty FullName
+
+      - name: Upload integration logs (always)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ctest-logs-integration-${{ matrix.os }}-port_${{ matrix.port }}
