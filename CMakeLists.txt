@@ -35,8 +35,13 @@ target_link_libraries(ioh_modbus PRIVATE nlohmann_json::nlohmann_json)
 
 # Optional libmodbus backend
 if(WITH_LIBMODBUS)
-  find_path(LIBMODBUS_INCLUDE_DIR NAMES modbus/modbus.h modbus.h)
-  find_library(LIBMODBUS_LIBRARY NAMES modbus)
+  # Help CMake locate libmodbus when using vcpkg toolchain on Windows
+  set(_VCPKG_INC "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/include")
+  set(_VCPKG_LIB "$ENV{VCPKG_ROOT}/installed/${VCPKG_TARGET_TRIPLET}/lib")
+  find_path(LIBMODBUS_INCLUDE_DIR NAMES modbus/modbus.h modbus.h
+            HINTS ${_VCPKG_INC})
+  find_library(LIBMODBUS_LIBRARY NAMES modbus
+               HINTS ${_VCPKG_LIB})
   if(LIBMODBUS_INCLUDE_DIR AND LIBMODBUS_LIBRARY)
     target_include_directories(ioh_modbus PRIVATE ${LIBMODBUS_INCLUDE_DIR} ${LIBMODBUS_INCLUDE_DIR}/modbus)
     target_compile_definitions(ioh_modbus PRIVATE WITH_LIBMODBUS=1)
