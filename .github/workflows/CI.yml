@@ -23,9 +23,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # TEMPORARY: Trimmed matrix for rapid debugging
+          # Linux
           - { os: ubuntu-latest,  arch: x86_64, with_tests: ON }
+          - { os: ubuntu-latest,  arch: x86_64, with_tests: OFF }
+          - { os: ubuntu-latest,  arch: i386,   with_tests: ON }
+          - { os: ubuntu-latest,  arch: armhf,  with_tests: ON }
+          - { os: ubuntu-latest,  arch: arm64,  with_tests: ON }
+          # Windows
           - { os: windows-latest, arch: win64,  with_tests: ON }
+          - { os: windows-latest, arch: win32,  with_tests: ON }
     steps:
       - uses: actions/checkout@v4
 
@@ -136,14 +142,16 @@ jobs:
   # - WITH_TESTS 固定 ON（需要建 test_e2e）
   # ------------------------------------------------------
   integration:
-    name: Integration (${{ matrix.os }}, port=${{ matrix.port }})
+    name: Integration (${{ matrix.os }}, arch=${{ matrix.arch }}, port=${{ matrix.port }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       max-parallel: 2
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        port: [1502]
+        include:
+          - { os: ubuntu-latest,  arch: x86_64, port: 1502 }
+          - { os: windows-latest, arch: win64,  port: 1502, triplet: x64-windows }
+          - { os: windows-latest, arch: win32,  port: 1502, triplet: x86-windows }
     env:
       PORT: ${{ matrix.port }}
 
@@ -183,8 +191,9 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          & $env:VCPKG_ROOT\vcpkg.exe install libmodbus:x64-windows
-          $bin = Join-Path $env:VCPKG_ROOT 'installed\x64-windows\bin'
+          $triplet = '${{ matrix.triplet }}'
+          & $env:VCPKG_ROOT\vcpkg.exe install "libmodbus:$triplet"
+          $bin = Join-Path $env:VCPKG_ROOT ("installed\$triplet\bin")
           "PATH=$env:PATH;$bin" | Out-File -FilePath $env:GITHUB_ENV -Append
 
       - name: Start Modbus TCP simulator (Ubuntu)
@@ -266,20 +275,22 @@ jobs:
           Write-Host "VCPKG_ROOT=$env:VCPKG_ROOT"
           $toolchain = Join-Path $env:VCPKG_ROOT 'scripts/buildsystems/vcpkg.cmake'
           Write-Host "TOOLCHAIN=$toolchain (exists=$([bool](Test-Path $toolchain)))"
+          $arch = '${{ matrix.arch }}'
+          if ($arch -eq 'win64') { $genA = 'x64' } else { $genA = 'Win32' }
           # First attempt: quiet configure
           $cfgLog = "build/_ci_cmake_configure.log"
-          cmake -S . -B build -A x64 `
+          cmake -S . -B build -A $genA `
             -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON `
             -DCMAKE_BUILD_TYPE=Release `
-            -DVCPKG_TARGET_TRIPLET=x64-windows `
+            -DVCPKG_TARGET_TRIPLET='${{ matrix.triplet }}' `
             "-DCMAKE_TOOLCHAIN_FILE=$toolchain"
           $code = $LASTEXITCODE
           if ($code -ne 0) {
             Write-Host "Configure failed. Retrying with verbose find debug..."
-            cmake -S . -B build -A x64 `
+            cmake -S . -B build -A $genA `
               -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON `
               -DCMAKE_BUILD_TYPE=Release `
-              -DVCPKG_TARGET_TRIPLET=x64-windows `
+              -DVCPKG_TARGET_TRIPLET='${{ matrix.triplet }}' `
               "-DCMAKE_TOOLCHAIN_FILE=$toolchain" `
               -DCMAKE_FIND_DEBUG_MODE=ON --log-level=VERBOSE 2>&1 | Tee-Object -FilePath $cfgLog
             $code2 = $LASTEXITCODE
