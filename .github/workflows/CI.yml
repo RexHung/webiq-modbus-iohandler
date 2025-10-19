@@ -47,10 +47,18 @@ jobs:
               sudo apt-get install -y g++-multilib libc6:i386 libstdc++6:i386 ;; \
             armhf) \
               sudo dpkg --add-architecture armhf; \
+              codename=$( . /etc/os-release && echo "$VERSION_CODENAME" ); \
+              echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $codename main universe multiverse restricted" | sudo tee /etc/apt/sources.list.d/armhf-ports.list >/dev/null; \
+              echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $codename-updates main universe multiverse restricted" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list >/dev/null; \
+              echo "deb [arch=armhf] http://ports.ubuntu.com/ubuntu-ports $codename-security main universe multiverse restricted" | sudo tee -a /etc/apt/sources.list.d/armhf-ports.list >/dev/null; \
               sudo apt-get update; \
               sudo apt-get install -y gcc-arm-linux-gnueabihf g++-arm-linux-gnueabihf qemu-user qemu-user-static binfmt-support libc6:armhf libstdc++6:armhf ;; \
             arm64) \
               sudo dpkg --add-architecture arm64; \
+              codename=$( . /etc/os-release && echo "$VERSION_CODENAME" ); \
+              echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $codename main universe multiverse restricted" | sudo tee /etc/apt/sources.list.d/arm64-ports.list >/dev/null; \
+              echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $codename-updates main universe multiverse restricted" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list >/dev/null; \
+              echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $codename-security main universe multiverse restricted" | sudo tee -a /etc/apt/sources.list.d/arm64-ports.list >/dev/null; \
               sudo apt-get update; \
               sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu qemu-user qemu-user-static binfmt-support libc6:arm64 libstdc++6:arm64 ;; \
             *) ;; \
