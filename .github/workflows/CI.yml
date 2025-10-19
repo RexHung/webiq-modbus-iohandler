@@ -279,16 +279,28 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           echo "Starting simulator on port $PORT"
-          python tests/integration/modbus_sim.py &
-          # Probe readiness for up to ~20s using bash /dev/tcp
-          for i in {1..20}; do
+          echo "Python version: $(python --version 2>&1)"
+          python - <<'PY'
+import sys
+try:
+    import pymodbus
+    print('pymodbus version:', getattr(pymodbus, '__version__', 'unknown'))
+except Exception as e:
+    print('import pymodbus failed:', e)
+    sys.exit(1)
+PY
+          nohup python tests/integration/modbus_sim.py >/tmp/modbus_sim.log 2>&1 &
+          SIM_PID=$!
+          echo "simulator pid=$SIM_PID"
+          # Probe readiness for up to ~40s using bash /dev/tcp
+          for i in {1..40}; do
             sleep 1
             if (echo > /dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
               echo "Simulator is ready on port $PORT"; break
             fi
           done
           if ! (echo > /dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
-            echo "ERROR: Simulator not reachable on port $PORT"; exit 1
+            echo "ERROR: Simulator not reachable on port $PORT"; echo "-- sim log tail --"; tail -n 200 /tmp/modbus_sim.log || true; exit 1
           fi
 
       - name: Start Modbus TCP simulator (Windows)
