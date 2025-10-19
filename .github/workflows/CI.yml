@@ -260,26 +260,31 @@ jobs:
 
       - name: Configure (Windows, WITH_LIBMODBUS=ON, WITH_TESTS=ON)
         if: runner.os == 'Windows'
+        shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
           Write-Host "VCPKG_ROOT=$env:VCPKG_ROOT"
-          $cfgOut = & cmake -S . -B build -A x64 `
+          # Stream full cmake configure output; enable detailed find debug
+          cmake -S . -B build -A x64 `
             -DWITH_LIBMODBUS=ON -DWITH_TESTS=ON `
             -DCMAKE_BUILD_TYPE=Release `
             -DVCPKG_TARGET_TRIPLET=x64-windows `
-            -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake 2>&1
-          $code = $LASTEXITCODE
-          Write-Host "--- cmake configure output (last 200 lines) ---"
-          $cfgOut | Select-Object -Last 200
-          if ($code -ne 0) {
+            -DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake `
+            -DCMAKE_FIND_DEBUG_MODE=ON --log-level=VERBOSE
+          if ($LASTEXITCODE -ne 0) {
             Write-Host "--- CMakeError.log (tail) ---"
             Get-Content build\CMakeFiles\CMakeError.log -ErrorAction SilentlyContinue | Select-Object -Last 200
+            Write-Host "--- CMakeOutput.log (tail) ---"
+            Get-Content build\CMakeFiles\CMakeOutput.log -ErrorAction SilentlyContinue | Select-Object -Last 200
             Write-Host "--- CMakeCache.txt (tail) ---"
             Get-Content build\CMakeCache.txt -ErrorAction SilentlyContinue | Select-Object -Last 200
-            exit $code
+            Write-Host "--- build directory snapshot ---"
+            Get-ChildItem -Recurse build | Select-Object -First 200
+            exit 1
+          } else {
+            Write-Host "Configure succeeded. Listing build directory:"
+            Get-ChildItem -Recurse build | Select-Object -First 200
           }
-          Write-Host "Configure succeeded. Listing build directory:"
-          Get-ChildItem -Recurse build | Select-Object -First 200
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
