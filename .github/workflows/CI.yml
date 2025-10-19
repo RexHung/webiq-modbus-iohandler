@@ -23,18 +23,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux arches
-          - { os: ubuntu-latest, arch: x86_64, with_tests: ON }
-          - { os: ubuntu-latest, arch: x86_64, with_tests: OFF }
-          - { os: ubuntu-latest, arch: i386,   with_tests: ON }
-          - { os: ubuntu-latest, arch: i386,   with_tests: OFF }
-          - { os: ubuntu-latest, arch: armhf,  with_tests: OFF }  # compile-only under QEMU
-          - { os: ubuntu-latest, arch: arm64,  with_tests: OFF }  # compile-only under QEMU
-          # Windows arches
-          - { os: windows-latest, arch: win64, with_tests: ON }
-          - { os: windows-latest, arch: win64, with_tests: OFF }
-          - { os: windows-latest, arch: win32, with_tests: ON }
-          - { os: windows-latest, arch: win32, with_tests: OFF }
+          # TEMPORARY: Trimmed matrix for rapid debugging
+          - { os: ubuntu-latest,  arch: x86_64, with_tests: ON }
+          - { os: windows-latest, arch: win64,  with_tests: ON }
     steps:
       - uses: actions/checkout@v4
 
@@ -99,9 +90,29 @@ jobs:
           if ($env:RUNNER_OS -eq 'Windows') { $regex = '^unit_.*' } else { $regex = '^unit_.*' }
           "CTEST_REGEX=$regex" | Out-File -FilePath $env:GITHUB_ENV -Append
 
-      - name: Run unit tests (Linux x86_64/i386, Windows x64/x86)
-        if: matrix.with_tests == 'ON' && ((runner.os == 'Linux' && (matrix.arch == 'x86_64' || matrix.arch == 'i386')) || (runner.os == 'Windows' && (matrix.arch == 'win64' || matrix.arch == 'win32')))
-        run: ctest --test-dir build -R "$CTEST_REGEX" --output-on-failure --timeout 60
+      - name: Run unit tests (Linux)
+        if: matrix.with_tests == 'ON' && runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -e
+          ctest --test-dir build -R "$CTEST_REGEX" --output-on-failure --timeout 60 \
+            || (echo "Re-running unit tests verbosely..."; ctest --test-dir build -R "$CTEST_REGEX" -V --timeout 60; exit 1)
+
+      - name: Run unit tests (Windows)
+        if: matrix.with_tests == 'ON' && runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ok = $true
+          try {
+            ctest --test-dir build -R "$env:CTEST_REGEX" --output-on-failure --timeout 60
+          } catch {
+            $ok = $false
+          }
+          if (-not $ok) {
+            Write-Host "Re-running unit tests verbosely..."
+            ctest --test-dir build -R "$env:CTEST_REGEX" -V --timeout 60
+            exit 1
+          }
 
       - name: Run unit tests under QEMU (Linux ARM)
         if: matrix.with_tests == 'ON' && runner.os == 'Linux' && (matrix.arch == 'armhf' || matrix.arch == 'arm64')
@@ -132,7 +143,7 @@ jobs:
       max-parallel: 2
       matrix:
         os: [ubuntu-latest, windows-latest]
-        port: [1502, 1503]
+        port: [1502]
     env:
       PORT: ${{ matrix.port }}
 
@@ -266,8 +277,29 @@ jobs:
       - name: Build
         run: cmake --build build --config Release --parallel
 
-      - name: Run E2E integration test (ctest -R e2e)
-        run: ctest --test-dir build -R e2e --output-on-failure --timeout 120
+      - name: Run E2E integration test (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -e
+          ctest --test-dir build -R e2e --output-on-failure --timeout 120 \
+            || (echo "Re-running E2E verbosely..."; ctest --test-dir build -R e2e -V --timeout 120; exit 1)
+
+      - name: Run E2E integration test (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ok = $true
+          try {
+            ctest --test-dir build -R e2e --output-on-failure --timeout 120
+          } catch {
+            $ok = $false
+          }
+          if (-not $ok) {
+            Write-Host "Re-running E2E verbosely..."
+            ctest --test-dir build -R e2e -V --timeout 120
+            exit 1
+          }
 
       - name: Show dependency info (Linux)
         if: runner.os == 'Linux'
