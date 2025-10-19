@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cstdint>
 #include <cstring>
+#include <cmath>
 
 extern "C" {
   using IoHandle = void*;

@@ -3,6 +3,7 @@
 #include <cstring>
 #include <string>
 #include <fstream>
+#include <cmath>
 
 extern "C" {
   using IoHandle = void*;
@@ -43,4 +44,3 @@ int main() {
   std::puts("unit_api_double_write_number: ok");
   return 0;
 }
-
