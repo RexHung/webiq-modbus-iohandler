@@ -424,6 +424,32 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
   nlohmann::json v;
   try { v = nlohmann::json::parse(valueJson); } catch (...) { return static_cast<int>(wiq::ModbusErr::PARSE_ERROR); }
 
+  // Allow writes even when item is mapped with read FCs for convenience
+  if (ic.type == std::string("bool") && (ic.function == 1 || ic.function == 2)) { // FC1/2 -> write as FC5
+    bool on = false;
+    if (v.is_boolean()) on = v.get<bool>();
+    else if (v.is_number_integer()) on = (v.get<int>() != 0);
+    else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+    return ctx->client->write_single_coil(ic.unit_id, ic.address, on);
+  }
+  if (ic.function == 3) { // FC3 -> write as FC6/16 depending on type/count
+    if (ic.type == std::string("float") || ic.count >= 2) {
+      if (!v.is_number()) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+      float f = static_cast<float>(v.get<double>());
+      std::uint32_t u; std::memcpy(&u, &f, 4);
+      std::uint16_t hi, lo; wiq::split_u32(u, ic.swap_words, hi, lo);
+      std::uint16_t rr[2] = {hi, lo};
+      return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr);
+    } else { // int16 path
+      double d = 0.0; if (v.is_number()) d = v.get<double>(); else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+      if (ic.scale == 0.0) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+      double rawd = wiq::unscale(d, ic.scale, ic.offset);
+      int32_t rawi = static_cast<int32_t>(llround(rawd));
+      std::uint16_t reg = static_cast<std::uint16_t>(static_cast<int16_t>(rawi));
+      return ctx->client->write_single_reg(ic.unit_id, ic.address, reg);
+    }
+  }
+
   if (ic.function == 5) { // single coil
     bool on = false;
     if (v.is_boolean()) on = v.get<bool>();
