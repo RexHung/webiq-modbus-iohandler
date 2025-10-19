@@ -207,6 +207,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install ccache (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y ccache
+
       # Cache pip for integration
       - name: Cache pip (Linux)
         if: runner.os == 'Linux'
