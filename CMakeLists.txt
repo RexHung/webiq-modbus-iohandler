@@ -35,10 +35,10 @@ target_link_libraries(ioh_modbus PRIVATE nlohmann_json::nlohmann_json)
 
 # Optional libmodbus backend
 if(WITH_LIBMODBUS)
-  find_path(LIBMODBUS_INCLUDE_DIR modbus.h)
+  find_path(LIBMODBUS_INCLUDE_DIR NAMES modbus/modbus.h modbus.h)
   find_library(LIBMODBUS_LIBRARY NAMES modbus)
   if(LIBMODBUS_INCLUDE_DIR AND LIBMODBUS_LIBRARY)
-    target_include_directories(ioh_modbus PRIVATE ${LIBMODBUS_INCLUDE_DIR})
+    target_include_directories(ioh_modbus PRIVATE ${LIBMODBUS_INCLUDE_DIR} ${LIBMODBUS_INCLUDE_DIR}/modbus)
     target_compile_definitions(ioh_modbus PRIVATE WITH_LIBMODBUS=1)
     target_link_libraries(ioh_modbus PRIVATE ${LIBMODBUS_LIBRARY})
     message(STATUS "libmodbus enabled")
@@ -131,7 +131,7 @@ if(BUILD_TESTING)
 
   add_executable(test_config_invalid_double tests/unit/test_config_invalid_double.cpp)
   target_link_libraries(test_config_invalid_double PRIVATE ioh_modbus)
-  add_test(NAME unit_config_invalid_double COMMAND test_config_invalid_double)
+  add_test(NAME unit_config_invalid_double COMMAND $<TARGET_FILE:test_config_invalid_double>)
 
   # E2E integration test binary
   add_executable(test_e2e tests/integration/test_e2e.cpp)
@@ -148,7 +148,7 @@ if(BUILD_TESTING)
       unit_config_invalid unit_api_fc2 unit_api_fc3_array unit_api_fc15_bad_array
       unit_api_fc16_bad_array unit_api_int16_scale_bounds unit_api_float_nonfinite
       unit_api_fc4_array unit_api_double_read_array unit_api_double_write_number
-      unit_api_double_word_order_dcba unit_config_invalid_float_count e2e
+      unit_api_double_word_order_dcba unit_config_invalid_float_count unit_config_invalid_double e2e
       PROPERTIES ENVIRONMENT "${_LD}"
     )
   elseif(WIN32)
@@ -158,7 +158,7 @@ if(BUILD_TESTING)
       unit_config_invalid unit_api_fc2 unit_api_fc3_array unit_api_fc15_bad_array
       unit_api_fc16_bad_array unit_api_int16_scale_bounds unit_api_float_nonfinite
       unit_api_fc4_array unit_api_double_read_array unit_api_double_write_number
-      unit_api_double_word_order_dcba unit_config_invalid_float_count e2e
+      unit_api_double_word_order_dcba unit_config_invalid_float_count unit_config_invalid_double e2e
       PROPERTIES ENVIRONMENT "${_PATH}"
     )
   endif()

@@ -45,7 +45,8 @@
           "scale": { "type": "number" },
           "offset": { "type": "number" },
           "swap_words": { "type": "boolean" },
-          "poll_ms": { "type": "integer", "minimum": 0 }
+          "poll_ms": { "type": "integer", "minimum": 0 },
+          "word_order": { "type": "string", "enum": ["ABCD","BADC","CDAB","DCBA"] }
         },
         "allOf": [
           { "if": { "properties": { "function": { "enum": [1,2,5,15] } } },

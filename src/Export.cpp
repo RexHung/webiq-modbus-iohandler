@@ -391,7 +391,7 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
       (void)write_str(outJson, outSize, s);
       return 0;
     }
-    if (ic.type == "float" || need == 2) {
+    if (ic.type == "float") {
       // interpret first 2 regs as float
       std::uint32_t u = wiq::join_u32(rr[0], rr.size() > 1 ? rr[1] : 0, ic.swap_words);
       float f;
@@ -433,7 +433,7 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
     return ctx->client->write_single_coil(ic.unit_id, ic.address, on);
   }
   if (ic.function == 3) { // FC3 -> write as FC6/16 depending on type/count
-    if (ic.type == std::string("float") || ic.count >= 2) {
+    if (ic.type == std::string("float")) {
       if (!v.is_number()) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
       float f = static_cast<float>(v.get<double>());
       std::uint32_t u; std::memcpy(&u, &f, 4);
