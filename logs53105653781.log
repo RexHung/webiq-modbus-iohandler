@@ -1,0 +1,214 @@
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	∩╗┐2025-10-19T06:37:08.9014773Z Current runner version: '2.329.0'
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9102341Z ##[group]Runner Image Provisioner
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9103521Z Hosted Compute Agent
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9104291Z Version: 20251013.424
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9105103Z Commit: cfdd8bfed34d71a55b72df4d2e82343c3fc2bab3
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9106176Z Build Date: 2025-10-13T20:22:23Z
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9106973Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9107671Z ##[group]Operating System
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9108480Z Microsoft Windows Server 2025
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9109328Z 10.0.26100
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9109925Z Datacenter
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9110580Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9111281Z ##[group]Runner Image
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9112033Z Image: windows-2025
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9112762Z Version: 20251014.59.1
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9114276Z Included Software: https://github.com/actions/runner-images/blob/win25/20251014.59/images/windows/Windows2025-Readme.md
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9116469Z Image Release: https://github.com/actions/runner-images/releases/tag/win25%2F20251014.59
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9118670Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9120240Z ##[group]GITHUB_TOKEN Permissions
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9122579Z Contents: read
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9123298Z Metadata: read
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9124017Z Packages: read
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9124667Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9127381Z Secret source: Actions
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9128366Z Prepare workflow directory
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9686921Z Prepare all required actions
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:08.9741083Z Getting action download info
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:09.4605037Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:09.7291168Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Set up job	2025-10-19T06:37:10.1923103Z Complete job name: Unit (windows-latest, arch=win64, WITH_TESTS=ON)
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	∩╗┐2025-10-19T06:37:10.4967393Z ##[group]Run actions/checkout@v4
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4968967Z with:
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4969708Z   repository: RexHung/webiq-modbus-iohandler
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4970854Z   token: ***
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4971455Z   ssh-strict: true
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4972090Z   ssh-user: git
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4972741Z   persist-credentials: true
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4973461Z   clean: true
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4974109Z   sparse-checkout-cone-mode: true
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4974922Z   fetch-depth: 1
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4975570Z   fetch-tags: false
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4976209Z   show-progress: true
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4976869Z   lfs: false
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4977459Z   submodules: false
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4978130Z   set-safe-directory: true
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:10.4979192Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:11.2368747Z Syncing repository: RexHung/webiq-modbus-iohandler
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:11.2372014Z ##[group]Getting Git version info
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:11.2373847Z Working directory is 'D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler'
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:13.8344820Z [command]"C:\Program Files\Git\bin\git.exe" version
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:13.8508016Z git version 2.51.0.windows.2
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5950999Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5957640Z Temporarily overriding HOME='D:\a\_temp\5c01c219-3f04-4856-ad24-5719a1834c9b' before making global git config changes
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5958852Z Adding repository directory to the temporary git global config as a safe directory
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5960164Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5962145Z Deleting the contents of 'D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler'
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5963177Z ##[group]Initializing the repository
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5963990Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5965058Z Initialized empty Git repository in D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/.git/
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5966776Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/RexHung/webiq-modbus-iohandler
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5972785Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5973533Z ##[group]Disabling automatic garbage collection
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5974217Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5975492Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5976086Z ##[group]Setting up auth
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5976750Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5978793Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5981225Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5983630Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5986040Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5987588Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5988235Z ##[group]Fetching the repository
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:15.5989740Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +383b00b2b6d634c1d0ba48e9fc3614b1d192f58a:refs/remotes/origin/feature/002-phase1-modbus-api-coverage
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.5102719Z From https://github.com/RexHung/webiq-modbus-iohandler
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.5297684Z  * [new ref]         383b00b2b6d634c1d0ba48e9fc3614b1d192f58a -> origin/feature/002-phase1-modbus-api-coverage
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.5848181Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.5851100Z ##[group]Determining the checkout info
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.5854407Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.5900309Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.6362253Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.6869440Z ##[group]Checking out the ref
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.6872089Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force -B feature/002-phase1-modbus-api-coverage refs/remotes/origin/feature/002-phase1-modbus-api-coverage
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.7410088Z branch 'feature/002-phase1-modbus-api-coverage' set up to track 'origin/feature/002-phase1-modbus-api-coverage'.
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.7425037Z Switched to a new branch 'feature/002-phase1-modbus-api-coverage'
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.7653183Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.8269194Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Run actions/checkout@v4	2025-10-19T06:37:16.8515607Z 383b00b2b6d634c1d0ba48e9fc3614b1d192f58a
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	∩╗┐2025-10-19T06:37:16.9426643Z ##[group]Run cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DWITH_LIBMODBUS=OFF -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:16.9427985Z [36;1mcmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DWITH_LIBMODBUS=OFF -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=Release[0m
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:16.9595715Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:16.9596237Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:45.7810486Z -- The CXX compiler identification is MSVC 19.44.35217.0
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:46.1275617Z -- Detecting CXX compiler ABI info
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:49.0507110Z -- Detecting CXX compiler ABI info - done
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:49.0815469Z -- Check for working CXX compiler: C:/Program Files/Microsoft Visual Studio/2022/Enterprise/VC/Tools/MSVC/14.44.35207/bin/Hostx64/x64/cl.exe - skipped
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:49.0949412Z -- Detecting CXX compile features
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:37:49.1053431Z -- Detecting CXX compile features - done
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:18.7162429Z -- Using the multi-header code from D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/build/_deps/nlohmann_json-src/include/
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.0993315Z -- Configuring done (49.6s)
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3513641Z -- Generating done (0.3s)
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3654862Z CMake Warning:
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3655516Z -- Build files have been written to: D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/build
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3661658Z   Manually-specified variables were not used by the project:
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3665743Z 
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3713460Z     CMAKE_BUILD_TYPE
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3717098Z 
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Configure (Windows x64)	2025-10-19T06:38:19.3717696Z 
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	∩╗┐2025-10-19T06:38:20.5454169Z ##[group]Run cmake --build build --config Release --parallel
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:20.5454888Z [36;1mcmake --build build --config Release --parallel[0m
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:20.5544199Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:20.5544703Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:21.4756327Z MSBuild version 17.14.23+b0019275e for .NET Framework
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:21.6157833Z 
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:22.3840263Z   1>Checking Build System
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:22.8711318Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:23.4705636Z   Export.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:24.8926290Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:25.0454034Z   test_codec.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:27.4759760Z   test_codec.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_codec.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:29.0211848Z D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\src\Export.cpp(384,52): warning C4838: conversion from 'int' to 'uint16_t' requires a narrowing conversion [D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\ioh_modbus.vcxproj]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:29.0393331Z D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\src\Export.cpp(384,73): warning C4838: conversion from 'int' to 'uint16_t' requires a narrowing conversion [D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\ioh_modbus.vcxproj]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:29.0400731Z D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\src\Export.cpp(384,94): warning C4838: conversion from 'int' to 'uint16_t' requires a narrowing conversion [D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\ioh_modbus.vcxproj]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:29.4471472Z   ModbusIoHandler.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:29.4614614Z   ModbusClient.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:29.8843238Z   Generating Code...
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:37.4644646Z      Creating library D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/build/Release/ioh_modbus.lib and object D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/build/Release/ioh_modbus.exp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:37.6817116Z   ioh_modbus.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\ioh_modbus.dll
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:37.8197260Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:37.9812344Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.0819001Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.1757108Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.2915869Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.3774380Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.4963740Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.5412661Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.6540221Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.7393958Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.8460936Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:38.9240203Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:39.0104515Z   test_stub.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:39.2247850Z   test_api_float_swap.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:40.3664253Z   test_config_invalid.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:41.1214982Z test_stub.obj : error LNK2019: unresolved external symbol "class std::unique_ptr<class wiq::IModbusClient,struct std::default_delete<class wiq::IModbusClient> > __cdecl wiq::make_stub_client(int,int,int,int)" (?make_stub_client@wiq@@YA?AV?$unique_ptr@VIModbusClient@wiq@@U?$default_delete@VIModbusClient@wiq@@@std@@@std@@HHHH@Z) referenced in function main [D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\test_stub.vcxproj]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:41.1458041Z D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_stub.exe : fatal error LNK1120: 1 unresolved externals [D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\test_stub.vcxproj]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:41.1571838Z   test_api_int16_scale_bounds.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:43.0625897Z   test_api_float_swap.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_float_swap.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:43.2434384Z   test_api_fc4_array.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:43.7863725Z   test_api_fc3_array.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:44.1835066Z   test_config_invalid.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_config_invalid.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:44.9350647Z   test_api_double_write_number.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:46.6320467Z   test_api_fc4_array.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_fc4_array.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:46.6697740Z   test_api_int16_scale_bounds.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_int16_scale_bounds.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:46.8197121Z   test_scale_zero.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:47.3132049Z   test_e2e.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:47.8430373Z   test_api_double_write_number.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_double_write_number.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:48.4462579Z D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\tests\integration\test_e2e.cpp(24,18): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details. [D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\test_e2e.vcxproj]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:48.7778268Z   test_api_fc3_array.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_fc3_array.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:48.8836001Z   test_api_double_read_array.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:49.3771939Z   test_scale_zero.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_scale_zero.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:50.2724740Z   test_e2e.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_e2e.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:50.3820733Z   test_config_invalid_float_count.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:50.8506237Z   test_api_double_read_array.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_double_read_array.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:50.9177658Z   test_config_invalid_double.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:52.2532202Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:52.8618526Z   test_api_float_nonfinite.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:53.8642070Z   test_config_invalid_double.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_config_invalid_double.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:54.0774645Z   test_config_invalid_float_count.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_config_invalid_float_count.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:54.2781532Z   test_api_float_nonfinite.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_float_nonfinite.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:54.3371380Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:54.5124348Z   test_api_fc2.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:55.5662172Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:55.7334924Z   test_api_fc16_bad_array.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:56.7940740Z   test_api_fc2.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_fc2.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:56.8626764Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:56.9780359Z   test_api_fc15_bad_array.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:58.0856242Z   test_api_fc16_bad_array.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_fc16_bad_array.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:58.1503734Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:58.3152828Z   test_api_double_word_order_dcba.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:59.3757281Z   test_api_fc15_bad_array.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_fc15_bad_array.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:59.5472819Z   test_api_double_word_order_dcba.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_double_word_order_dcba.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:59.6010091Z   Building Custom Rule D:/a/webiq-modbus-iohandler/webiq-modbus-iohandler/CMakeLists.txt
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:38:59.7213762Z   test_api_coils_array.cpp
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:39:00.9443512Z   test_api_coils_array.vcxproj -> D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler\build\Release\test_api_coils_array.exe
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Build	2025-10-19T06:39:01.4281147Z ##[error]Process completed with exit code 1.
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	∩╗┐2025-10-19T06:39:01.4733624Z ##[group]Run actions/upload-artifact@v4
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4734060Z with:
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4734400Z   name: ctest-logs-unit-windows-latest-win64-tests_ON
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4735029Z   path: build/Testing
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	build/LastTest.log
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	build/**/LastTest.log
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4735538Z   if-no-files-found: warn
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4735871Z   compression-level: 6
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4736154Z   overwrite: false
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4736421Z   include-hidden-files: false
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:01.4736740Z ##[endgroup]
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	2025-10-19T06:39:03.3467303Z ##[warning]No files were found with the provided path: build/Testing
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	build/LastTest.log
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Upload unit test logs (always)	build/**/LastTest.log. No artifacts will be uploaded.
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	∩╗┐2025-10-19T06:39:03.3908499Z Post job cleanup.
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:03.8836384Z [command]"C:\Program Files\Git\bin\git.exe" version
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:04.0570468Z git version 2.51.0.windows.2
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:04.0776726Z Temporarily overriding HOME='D:\a\_temp\89e2f683-18fe-46f1-a560-a005066897e1' before making global git config changes
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:04.0795994Z Adding repository directory to the temporary git global config as a safe directory
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:04.0904637Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\webiq-modbus-iohandler\webiq-modbus-iohandler
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:04.1305093Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:04.1833830Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:05.0807095Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:05.0821118Z http.https://github.com/.extraheader
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:05.1036944Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Post Run actions/checkout@v4	2025-10-19T06:39:05.1499883Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Complete job	∩╗┐2025-10-19T06:39:05.8981377Z Cleaning up orphan processes
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Complete job	2025-10-19T06:39:05.9294468Z Terminate orphan process: pid (8080) (vctip)
+Unit (windows-latest, arch=win64, WITH_TESTS=ON)	Complete job	2025-10-19T06:39:05.9360059Z Terminate orphan process: pid (4564) (MSBuild)

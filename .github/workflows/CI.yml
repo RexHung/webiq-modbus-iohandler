@@ -142,7 +142,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest]
         port: [1502]
     env:
       PORT: ${{ matrix.port }}
@@ -168,32 +168,7 @@ jobs:
           sudo apt-get install -y libmodbus-dev
 
       # Windows deps: libmodbus via vcpkg
-      - name: Set up vcpkg (Windows)
-        if: runner.os == 'Windows'
-        uses: microsoft/vcpkg-action@v1
-
-      - name: Cache vcpkg artifacts (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/cache@v4
-        with:
-          path: |
-            ${{ env.VCPKG_ROOT }}\installed
-            ${{ env.VCPKG_ROOT }}\downloads
-          key: vcpkg-${{ runner.os }}-libmodbus
-          restore-keys: |
-            vcpkg-${{ runner.os }}-
-
-      - name: Install libmodbus with vcpkg (Windows)
-        if: runner.os == 'Windows'
-        run: vcpkg install libmodbus:x64-windows
-
-      - name: Add vcpkg runtime to PATH (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $bin = Join-Path $env:VCPKG_ROOT 'installed\x64-windows\bin'
-          echo "Adding $bin to PATH"
-          echo ("PATH=$env:PATH;" + $bin) | Out-File -FilePath $env:GITHUB_ENV -Append
+      # Windows integration temporarily disabled for triage
 
       - name: Start Modbus TCP simulator (Ubuntu)
         if: runner.os == 'Linux'

@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstdint>
+#include <cstring>
 #include <vector>
 
 int main() {
@@ -29,4 +30,3 @@ int main() {
   std::puts("unit_stub: ok");
   return 0;
 }
-

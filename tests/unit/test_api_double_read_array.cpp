@@ -4,6 +4,7 @@
 #include <string>
 #include <fstream>
 #include <cstdint>
+#include <cstring>
 
 extern "C" {
   using IoHandle = void*;
@@ -59,4 +60,3 @@ int main() {
   std::puts("unit_api_double_read_array: ok");
   return 0;
 }
-
