@@ -3,7 +3,7 @@ name: Sanitizers (Linux)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 4 * * *'  # 每日 04:00 UTC（Nightly）
+    - cron: '0 4 * * 0'  # 每週日 04:00 UTC（可隨時移除）
 
 jobs:
   asan-ubsan:
