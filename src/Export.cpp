@@ -11,6 +11,8 @@
 #include <fstream>
 #include <cmath>
 #include <set>
+#include <thread>
+#include <chrono>
 
 #if defined(WITH_LIBMODBUS)
 # include <modbus.h>
@@ -126,6 +128,11 @@ struct IoContext {
   std::string host; int port{1502}; int timeout_ms{1000};
   // transport
   std::string transport; // tcp|rtu
+  // reconnect policy
+  int reconnect_retries{1};            // number of reconnect attempts upon NOT_CONNECTED
+  int reconnect_interval_ms{0};        // base wait before each reconnect attempt
+  double reconnect_backoff{1.0};       // multiplier applied after each attempt (>=1.0)
+  int reconnect_max_interval_ms{0};    // optional cap; 0 means uncapped
 };
 
 static bool load_file(const char* path, std::string& out) {
@@ -174,10 +181,31 @@ static double unscale(double scaled, double scale, double offset) { return (scal
 // Helper: perform a Modbus client operation; if NOT_CONNECTED, try reconnect once and retry
 static int call_with_reconnect(wiq::IoContext* ctx, const std::function<int()>& op) {
   int rc = op();
-  if (rc == static_cast<int>(wiq::ModbusErr::NOT_CONNECTED)) {
-    if (ctx && ctx->client) {
-      (void)ctx->client->connect();
-      rc = op();
+  if (!ctx || !ctx->client) return rc;
+  const int NOT_CONNECTED_RC = static_cast<int>(wiq::ModbusErr::NOT_CONNECTED);
+  if (rc != NOT_CONNECTED_RC) return rc;
+
+  int attempts = ctx->reconnect_retries;
+  if (attempts <= 0) return rc;
+
+  using namespace std::chrono;
+  double backoff = (ctx->reconnect_backoff < 1.0) ? 1.0 : ctx->reconnect_backoff;
+  int wait_ms = (ctx->reconnect_interval_ms < 0) ? 0 : ctx->reconnect_interval_ms;
+  int max_ms = (ctx->reconnect_max_interval_ms < 0) ? 0 : ctx->reconnect_max_interval_ms;
+
+  for (int attempt = 1; attempt <= attempts; ++attempt) {
+    if (wait_ms > 0) std::this_thread::sleep_for(milliseconds(wait_ms));
+    (void)ctx->client->connect();
+    rc = op();
+    if (rc != NOT_CONNECTED_RC) return rc; // success or different error
+
+    // prepare next wait with backoff
+    if (wait_ms > 0) {
+      double next = wait_ms * backoff;
+      if (next > static_cast<double>(INT32_MAX)) next = static_cast<double>(INT32_MAX);
+      int next_ms = static_cast<int>(next);
+      if (max_ms > 0 && next_ms > max_ms) next_ms = max_ms;
+      wait_ms = next_ms;
     }
   }
   return rc;
@@ -215,6 +243,15 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
     auto t = cfg["tcp"]; ctx->host = t.value("host", std::string("127.0.0.1")); ctx->port = t.value("port", 1502); ctx->timeout_ms = t.value("timeout_ms", 1000);
     if (ctx->port <= 0 || ctx->port > 65535) return nullptr;
   }
+  // reconnect policy (optional)
+  if (cfg.contains("reconnect") && cfg["reconnect"].is_object()) {
+    auto r = cfg["reconnect"];
+    ctx->reconnect_retries = r.value("retries", ctx->reconnect_retries);
+    ctx->reconnect_interval_ms = r.value("interval_ms", ctx->reconnect_interval_ms);
+    ctx->reconnect_backoff = r.value("backoff_multiplier", ctx->reconnect_backoff);
+    ctx->reconnect_max_interval_ms = r.value("max_interval_ms", ctx->reconnect_max_interval_ms);
+  }
+
   ctx->client = wiq::make_client_for(ctx->transport, ctx->host, ctx->port);
   if (ctx->client) ctx->client->set_timeout_ms(ctx->timeout_ms);
   // parse items

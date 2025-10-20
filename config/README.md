@@ -28,6 +28,14 @@ Notes
   - For 32-bit float, `swap_words` remains applicable (two-register swap).
   - For 16-bit integer types, `count` can be 1 or an array (for FC16/FC3/FC4 bulk), but will not be treated as float even when `count: 2`.
 
+Auto‑Reconnect Policy (top‑level `reconnect`)
+- `retries` (int, >=0): number of reconnect attempts on NOT_CONNECTED. Default: 1.
+- `interval_ms` (int, >=0): base delay before each reconnect attempt. Default: 0 ms.
+- `backoff_multiplier` (number, >=1.0): exponential backoff multiplier. Default: 1.0.
+- `max_interval_ms` (int, >=0): cap for backoff delay (0 = uncapped). Default: 0.
+
+Recommended: `{ "retries": 3, "interval_ms": 500, "backoff_multiplier": 2.0, "max_interval_ms": 4000 }`.
+
 Word Order Reference (double)
 - ABCD: R0→A, R1→B, R2→C, R3→D
 - BADC: R0→B, R1→A, R2→D, R3→C

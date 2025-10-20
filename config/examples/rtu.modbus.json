@@ -1,5 +1,6 @@
 {
   "transport": "rtu",
+  "reconnect": { "retries": 3, "interval_ms": 500, "backoff_multiplier": 2.0, "max_interval_ms": 4000 },
   "rtu": {
     "port": "/dev/ttyUSB0",
     "baud": 9600,

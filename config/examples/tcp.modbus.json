@@ -1,5 +1,6 @@
 {
   "transport": "tcp",
+  "reconnect": { "retries": 3, "interval_ms": 500, "backoff_multiplier": 2.0, "max_interval_ms": 4000 },
   "tcp": { "host": "127.0.0.1", "port": 1502, "timeout_ms": 1000 },
   "items": [
     { "name": "coil.run",     "unit_id": 1, "function": 1,  "address": 10,  "type": "bool",  "poll_ms": 100 },

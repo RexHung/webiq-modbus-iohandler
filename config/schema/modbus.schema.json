@@ -7,6 +7,16 @@
   "required": ["transport", "items"],
   "properties": {
     "transport": { "type": "string", "enum": ["tcp", "rtu"] },
+    "reconnect": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retries": { "type": "integer", "minimum": 0 },
+        "interval_ms": { "type": "integer", "minimum": 0 },
+        "backoff_multiplier": { "type": "number", "minimum": 1 },
+        "max_interval_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
     "tcp": {
       "type": "object",
       "additionalProperties": false,

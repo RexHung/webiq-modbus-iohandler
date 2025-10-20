@@ -172,6 +172,7 @@ Notes
 {
   "transport": "tcp",
   "tcp": { "host": "192.168.1.50", "port": 502, "timeout_ms": 1000 },
+  "reconnect": { "retries": 3, "interval_ms": 500, "backoff_multiplier": 2.0, "max_interval_ms": 4000 },
   "items": [
     { "name": "coil.run",      "unit_id": 1, "function": 1,  "address": 10,  "type": "bool",   "poll_ms": 100 },
     { "name": "hr.temp_c",     "unit_id": 1, "function": 3,  "address": 0,   "type": "int16",  "scale": 0.1, "offset": 0.0, "poll_ms": 200 },
@@ -181,6 +182,23 @@ Notes
   ]
 }
 ```
+
+## Auto‑Reconnect Policy
+
+Control how the library attempts to reconnect when an operation returns NOT_CONNECTED.
+
+- Fields (top‑level `reconnect`):
+  - `retries` (int, >=0): number of reconnect attempts after a NOT_CONNECTED. Default: 1.
+  - `interval_ms` (int, >=0): base delay before each reconnect attempt. Default: 0 ms.
+  - `backoff_multiplier` (number, >=1.0): multiply delay after each attempt (exponential backoff). Default: 1.0.
+  - `max_interval_ms` (int, >=0): optional cap for backoff delay (0 = uncapped). Default: 0.
+
+Behavior
+- On NOT_CONNECTED, perform up to `retries` reconnect attempts. Before each attempt, sleep `interval_ms` (growing by `backoff_multiplier` and capped at `max_interval_ms`). After calling `connect()`, retry the operation. If it succeeds or fails with another error, return immediately.
+
+Recommended values
+- Typical: `{ "retries": 3, "interval_ms": 500, "backoff_multiplier": 2.0, "max_interval_ms": 4000 }`
+- Low‑latency devices: lower `interval_ms` (e.g., 100–200 ms) and limit `retries` to 2–3.
 
 ## Using as a CMake Package
 
