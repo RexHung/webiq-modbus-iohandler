@@ -3,14 +3,18 @@ name: Sanitizers (Linux)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 4 1,15 * *'  # 每月 1 日與 15 日 04:00 UTC（雙週一次）
+    - cron: '0 4 * * *'  # 每日 04:00 UTC（Nightly）
 
 jobs:
   asan-ubsan:
-    name: ASan+UBSan (ubuntu-latest)
+    name: ASan+UBSan (${{ matrix.build_type }})
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, RelWithDebInfo]
     steps:
       - uses: actions/checkout@v4
 
@@ -22,13 +26,16 @@ jobs:
       - name: Configure with sanitizers
         run: |
           SAN='-fsanitize=address,undefined -fno-omit-frame-pointer -O1 -g'
-          cmake -S . -B build-sanitizers \
-            -DWITH_LIBMODBUS=OFF -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          BUILD_DIR="build-sanitizers-${{ matrix.build_type }}"
+          cmake -S . -B "$BUILD_DIR" \
+            -DWITH_LIBMODBUS=OFF -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
             -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
             -DCMAKE_C_FLAGS="$SAN" -DCMAKE_CXX_FLAGS="$SAN" -DCMAKE_EXE_LINKER_FLAGS="$SAN" -DCMAKE_SHARED_LINKER_FLAGS="$SAN"
 
       - name: Build
-        run: cmake --build build-sanitizers --config RelWithDebInfo --parallel
+        run: |
+          BUILD_DIR="build-sanitizers-${{ matrix.build_type }}"
+          cmake --build "$BUILD_DIR" --config ${{ matrix.build_type }} --parallel
 
       - name: Run unit tests (sanitized)
         env:
@@ -36,5 +43,6 @@ jobs:
           UBSAN_OPTIONS: print_stacktrace=1
         run: |
           set -e
-          ctest --test-dir build-sanitizers -R '^unit_' --output-on-failure --timeout 120 \
-            || (echo 'Re-running unit tests verbosely...'; ctest --test-dir build-sanitizers -R '^unit_' -V --timeout 120; exit 1)
+          BUILD_DIR="build-sanitizers-${{ matrix.build_type }}"
+          ctest --test-dir "$BUILD_DIR" -R '^unit_' --output-on-failure --timeout 120 \
+            || (echo 'Re-running unit tests verbosely...'; ctest --test-dir "$BUILD_DIR" -R '^unit_' -V --timeout 120; exit 1)
