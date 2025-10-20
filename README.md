@@ -87,3 +87,39 @@ cmake --build build --config Release
 └─ .github/workflows/
    └─ ci.yml
 ```
+
+## Using as a CMake Package
+
+After installing or extracting a CPack archive into a prefix, consumers can find and link the library via `find_package`.
+
+- Install or extract the package so that `lib/cmake/WebIQModbusIoHandler` exists under your prefix (e.g., `C:/deps/webiq` or `/opt/webiq`).
+- Point `CMAKE_PREFIX_PATH` to that prefix, then:
+
+```cmake
+cmake_minimum_required(VERSION 3.19)
+project(consumer LANGUAGES CXX)
+
+find_package(WebIQModbusIoHandler CONFIG REQUIRED)
+
+add_executable(consumer main.cpp)
+target_link_libraries(consumer PRIVATE WebIQ::ioh_modbus)
+```
+
+See `examples/consumer-cmake` for a minimal consumer project and build instructions.
+
+Notes
+- Windows: ensure the directory containing the built `ioh_modbus.dll` is on `PATH` when running.
+- Version pinning: `find_package(WebIQModbusIoHandler 0.2 CONFIG REQUIRED)` matches the installed `ConfigVersion`.
+
+## Windows PDBs (Optional)
+
+- CMake option `PACKAGE_PDB` controls whether MSVC `.pdb` files are installed and included in packages.
+- CI releases enable this (Windows job passes `-DPACKAGE_PDB=ON`).
+- Local build enabling PDBs:
+  - `cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DPACKAGE_PDB=ON`
+
+## Sanitizers Workflow
+
+- GitHub Actions job: Sanitizers (Linux) runs Address/Undefined sanitizers on unit tests.
+- Schedule: twice monthly and manual dispatch.
+- Badge at top of this README links to the workflow run.
