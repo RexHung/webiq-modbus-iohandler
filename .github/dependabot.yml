@@ -16,7 +16,7 @@ updates:
         update-types: ["minor", "patch"]
 
   - package-ecosystem: pip
-    directory: "/"
+    directory: "/tests/integration"
     schedule:
       interval: weekly
       day: sunday
