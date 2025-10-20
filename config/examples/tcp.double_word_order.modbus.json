@@ -1,0 +1,13 @@
+{
+  "transport": "tcp",
+  "tcp": { "host": "127.0.0.1", "port": 1502, "timeout_ms": 1000 },
+  "items": [
+    { "name": "double.abcd", "unit_id": 1, "function": 3, "address": 0,   "type": "double", "count": 4, "word_order": "ABCD" },
+    { "name": "double.badc", "unit_id": 1, "function": 3, "address": 10,  "type": "double", "count": 4, "word_order": "BADC" },
+    { "name": "double.cdab", "unit_id": 1, "function": 3, "address": 20,  "type": "double", "count": 4, "word_order": "CDAB" },
+    { "name": "double.dcba", "unit_id": 1, "function": 3, "address": 30,  "type": "double", "count": 4, "word_order": "DCBA" },
+    { "name": "float.swap_false", "unit_id": 1, "function": 4, "address": 100, "type": "float",  "count": 2, "swap_words": false },
+    { "name": "float.swap_true",  "unit_id": 1, "function": 4, "address": 120, "type": "float",  "count": 2, "swap_words": true }
+  ]
+}
+

@@ -150,6 +150,38 @@ cmake --build build --config Release
    └─ ci.yml
 ```
 
+## Word Order (64-bit double)
+
+64-bit values occupy four 16-bit Modbus registers (words). Devices may store these words in different orders. Use `word_order` to match your device. The letters A, B, C, D denote the four 16-bit words of a single 64‑bit value.
+
+Register-to-word mapping per `word_order`:
+
+- ABCD: R0→A, R1→B, R2→C, R3→D
+- BADC: R0→B, R1→A, R2→D, R3→C
+- CDAB: R0→C, R1→D, R2→A, R3→B
+- DCBA: R0→D, R1→C, R2→B, R3→A
+
+Notes
+- `double` in FC3/FC4/FC16 enforces `count: 4`.
+- For 32‑bit `float`, use `swap_words: true/false` (two-word swap) and `count: 2`.
+- Non-float arrays with `count: 2` are not treated as floats.
+
+## Full Config Example
+
+```json
+{
+  "transport": "tcp",
+  "tcp": { "host": "192.168.1.50", "port": 502, "timeout_ms": 1000 },
+  "items": [
+    { "name": "coil.run",      "unit_id": 1, "function": 1,  "address": 10,  "type": "bool",   "poll_ms": 100 },
+    { "name": "hr.temp_c",     "unit_id": 1, "function": 3,  "address": 0,   "type": "int16",  "scale": 0.1, "offset": 0.0, "poll_ms": 200 },
+    { "name": "ai.flow_f",     "unit_id": 1, "function": 4,  "address": 100, "count": 2, "type": "float",  "swap_words": false, "poll_ms": 250 },
+    { "name": "hr.energy_kwh", "unit_id": 1, "function": 3,  "address": 200, "count": 4, "type": "double", "word_order": "BADC", "poll_ms": 500 },
+    { "name": "hr.batch",      "unit_id": 1, "function": 16, "address": 300, "count": 4, "type": "uint16" }
+  ]
+}
+```
+
 ## Using as a CMake Package
 
 After installing or extracting a CPack archive into a prefix, consumers can find and link the library via `find_package`.

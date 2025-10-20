@@ -27,3 +27,23 @@ Notes
   - `word_order`: one of `ABCD`, `BADC`, `CDAB`, `DCBA` (default `ABCD`).
   - For 32-bit float, `swap_words` remains applicable (two-register swap).
   - For 16-bit integer types, `count` can be 1 or an array (for FC16/FC3/FC4 bulk), but will not be treated as float even when `count: 2`.
+
+Word Order Reference (double)
+- ABCD: R0→A, R1→B, R2→C, R3→D
+- BADC: R0→B, R1→A, R2→D, R3→C
+- CDAB: R0→C, R1→D, R2→A, R3→B
+- DCBA: R0→D, R1→C, R2→B, R3→A
+
+Full config example (TCP)
+```json
+{
+  "transport": "tcp",
+  "tcp": { "host": "127.0.0.1", "port": 1502, "timeout_ms": 1000 },
+  "items": [
+    { "name": "coil.run",      "unit_id": 1, "function": 1,  "address": 10,  "type": "bool",   "poll_ms": 100 },
+    { "name": "hr.temp_c",     "unit_id": 1, "function": 3,  "address": 0,   "type": "int16",  "scale": 0.1, "offset": 0.0, "poll_ms": 200 },
+    { "name": "ai.flow_f",     "unit_id": 1, "function": 4,  "address": 100, "count": 2, "type": "float",  "swap_words": false, "poll_ms": 250 },
+    { "name": "hr.energy_kwh", "unit_id": 1, "function": 3,  "address": 200, "count": 4, "type": "double", "word_order": "CDAB", "poll_ms": 500 }
+  ]
+}
+```
