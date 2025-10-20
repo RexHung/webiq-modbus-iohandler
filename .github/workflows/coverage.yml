@@ -3,7 +3,7 @@ name: Coverage (Linux)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 5 * * *'  # 每日 05:00 UTC（Nightly）
+    - cron: '0 5 1,15 * *'  # 每月 1 日與 15 日 05:00 UTC（雙週一次）
 
 jobs:
   gcovr:
