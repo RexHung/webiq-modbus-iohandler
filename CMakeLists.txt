@@ -35,7 +35,10 @@ add_library(ioh_modbus SHARED
   src/ModbusIoHandler.cpp
   src/modbus/ModbusClient.cpp
 )
-target_include_directories(ioh_modbus PUBLIC include)
+target_include_directories(ioh_modbus PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>
+)
 target_compile_definitions(ioh_modbus PRIVATE WIQ_IOH_BUILD)
 
 # JSON dependency (nlohmann/json)
