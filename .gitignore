@@ -43,6 +43,10 @@
 # === AI agent local data ===
 .codex/
 
+# Logs (local CI/job logs)
+*.log
+logs*.log
+
 # SDK binaries / installers (not tracked)
 doc/sdk/**/*.dll
 doc/sdk/**/*.so

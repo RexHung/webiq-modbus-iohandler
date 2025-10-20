@@ -1,0 +1,40 @@
+name: Sanitizers (Linux)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 4 1,15 * *'  # 每月 1 日與 15 日 04:00 UTC（雙週一次）
+
+jobs:
+  asan-ubsan:
+    name: ASan+UBSan (ubuntu-latest)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ccache
+
+      - name: Configure with sanitizers
+        run: |
+          SAN='-fsanitize=address,undefined -fno-omit-frame-pointer -O1 -g'
+          cmake -S . -B build-sanitizers \
+            -DWITH_LIBMODBUS=OFF -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_C_FLAGS="$SAN" -DCMAKE_CXX_FLAGS="$SAN" -DCMAKE_EXE_LINKER_FLAGS="$SAN" -DCMAKE_SHARED_LINKER_FLAGS="$SAN"
+
+      - name: Build
+        run: cmake --build build-sanitizers --config RelWithDebInfo --parallel
+
+      - name: Run unit tests (sanitized)
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+          UBSAN_OPTIONS: print_stacktrace=1
+        run: |
+          set -e
+          ctest --test-dir build-sanitizers -R '^unit_' --output-on-failure --timeout 120 \
+            || (echo 'Re-running unit tests verbosely...'; ctest --test-dir build-sanitizers -R '^unit_' -V --timeout 120; exit 1)

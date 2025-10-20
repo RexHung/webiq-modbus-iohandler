@@ -1,7 +1,17 @@
 # tests/integration/modbus_sim.py
-from pymodbus.server import StartTcpServer
-from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
-from pymodbus.datastore import ModbusSequentialDataBlock
+try:
+    from pymodbus.server import StartTcpServer  # pymodbus >=3
+except Exception:  # pragma: no cover
+    from pymodbus.server.sync import StartTcpServer  # pymodbus 2.x
+
+try:
+    from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
+    from pymodbus.datastore import ModbusSequentialDataBlock
+except Exception:  # pragma: no cover
+    # Some distributions move classes under datastore.store in 2.x
+    from pymodbus.datastore import ModbusServerContext
+    from pymodbus.datastore.store import ModbusSlaveContext
+    from pymodbus.datastore import ModbusSequentialDataBlock
 import os
 
 # 初始資料：

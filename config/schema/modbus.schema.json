@@ -45,7 +45,8 @@
           "scale": { "type": "number" },
           "offset": { "type": "number" },
           "swap_words": { "type": "boolean" },
-          "poll_ms": { "type": "integer", "minimum": 0 }
+          "poll_ms": { "type": "integer", "minimum": 0 },
+          "word_order": { "type": "string", "enum": ["ABCD","BADC","CDAB","DCBA"] }
         },
         "allOf": [
           { "if": { "properties": { "function": { "enum": [1,2,5,15] } } },
@@ -53,7 +54,9 @@
           { "if": { "properties": { "function": { "enum": [3,4,6,16] } } },
             "then": { "not": { "properties": { "type": { "const": "bool" } }, "required": ["type"] } } },
           { "if": { "properties": { "type": { "const": "float" }, "function": { "enum": [3,4,16] } } },
-            "then": { "properties": { "count": { "minimum": 2 } }, "required": ["count"] } }
+            "then": { "properties": { "count": { "const": 2 } } } },
+          { "if": { "properties": { "type": { "const": "double" }, "function": { "enum": [3,4,16] } } },
+            "then": { "properties": { "count": { "const": 4 } } } }
         ]
       }
     }

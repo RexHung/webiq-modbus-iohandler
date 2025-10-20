@@ -23,3 +23,7 @@ Notes
 - Coils/discrete functions (1,2,5,15) require `type: "bool"`.
 - Register functions (3,4,6,16) must not use `type: "bool"`.
 - 32-bit float uses two 16-bit registers; set `count: 2` and optionally `swap_words: true` when the device uses reversed word order.
+- 64-bit double uses four 16-bit registers; `count: 4` is enforced. Use `word_order` to match device word order for 64-bit values:
+  - `word_order`: one of `ABCD`, `BADC`, `CDAB`, `DCBA` (default `ABCD`).
+  - For 32-bit float, `swap_words` remains applicable (two-register swap).
+  - For 16-bit integer types, `count` can be 1 or an array (for FC16/FC3/FC4 bulk), but will not be treated as float even when `count: 2`.

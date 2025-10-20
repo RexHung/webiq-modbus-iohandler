@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <cstring>
 #include <cstdio>
+#include <cmath>
 
 static std::uint32_t join_u32(std::uint16_t hi, std::uint16_t lo, bool swap_words) {
   return swap_words ? (std::uint32_t(lo) << 16) | hi
