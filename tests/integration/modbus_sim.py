@@ -5,6 +5,44 @@ except Exception:  # pragma: no cover
     from pymodbus.server.sync import StartTcpServer  # pymodbus 2.x
 
 import importlib
+import pkgutil
+
+
+_RESOLVE_CACHE = {}
+
+
+# Fallback scan handles reorganized modules introduced in newer pymodbus releases.
+def _scan_for_symbol(symbol, *packages):
+    if symbol in _RESOLVE_CACHE:
+        return _RESOLVE_CACHE[symbol]
+
+    for package_name in packages:
+        try:
+            package = importlib.import_module(package_name)
+        except ImportError:
+            continue
+
+        to_inspect = [package.__name__]
+
+        if hasattr(package, "__path__"):
+            for modinfo in pkgutil.walk_packages(package.__path__, package.__name__ + "."):
+                to_inspect.append(modinfo.name)
+
+        for module_name in to_inspect:
+            try:
+                module = importlib.import_module(module_name)
+            except Exception:
+                continue
+
+            try:
+                value = getattr(module, symbol)
+            except AttributeError:
+                continue
+
+            _RESOLVE_CACHE[symbol] = value
+            return value
+
+    raise ImportError(f"Cannot resolve {symbol} from packages: {packages}")
 
 
 def resolve(symbol, *candidates):
@@ -14,7 +52,8 @@ def resolve(symbol, *candidates):
             return getattr(module, symbol)
         except (ImportError, AttributeError):
             continue
-    raise ImportError(f"Cannot resolve {symbol} from candidates: {candidates}")
+
+    return _scan_for_symbol(symbol, "pymodbus.datastore", "pymodbus.server", "pymodbus")
 
 
 ModbusServerContext = resolve(
@@ -69,11 +108,19 @@ def main():
     # 允許以環境變數 PORT 覆寫預設 1502，利於 CI 並行測試
     port = int(os.getenv("PORT", "1502"))
     print(f"Simulator starting on port {port}", flush=True)
+    kwargs = {"context": context, "address": ("0.0.0.0", port)}
     try:
-        StartTcpServer(context=context, address=("0.0.0.0", port), allow_reuse_address=True)
-    except TypeError:
+        StartTcpServer(**kwargs, allow_reuse_address=True)
+    except TypeError as exc:
+        if "allow_reuse_address" in str(exc):
+            StartTcpServer(**kwargs)
+            return
+
         # 舊版 pymodbus 2.x 僅支援 positional context 參數
-        StartTcpServer(context, address=("0.0.0.0", port), allow_reuse_address=True)
+        try:
+            StartTcpServer(context, address=("0.0.0.0", port), allow_reuse_address=True)
+        except TypeError:
+            StartTcpServer(context, address=("0.0.0.0", port))
 
 if __name__ == "__main__":
     main()
