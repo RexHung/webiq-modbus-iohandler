@@ -235,3 +235,19 @@ Notes
 - GitHub Actions job: Sanitizers (Linux) runs Address/Undefined sanitizers on unit tests.
 - Schedule: twice monthly and manual dispatch.
 - Badge at top of this README links to the workflow run.
+
+## Logging
+
+Basic runtime logging is available and controlled via environment variables:
+
+- `WIQ_LOG_LEVEL` (default `info`): one of `trace, debug, info, warn, error, none` (or `0..5`).
+- `WIQ_LOG_TS` (default `0`): set to `1/true` to include timestamps.
+
+Example
+```bash
+WIQ_LOG_LEVEL=debug WIQ_LOG_TS=1 ./your_app
+```
+
+Log format
+- `[YYYY-MM-DD HH:MM:SS] LEVEL file:line: message` when `WIQ_LOG_TS=1`
+- `LEVEL file:line: message` otherwise

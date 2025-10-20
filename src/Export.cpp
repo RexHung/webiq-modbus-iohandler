@@ -11,6 +11,7 @@
 #include <fstream>
 #include <cmath>
 #include <set>
+#include "log.hpp"
 #include <thread>
 #include <chrono>
 
@@ -193,11 +194,20 @@ static int call_with_reconnect(wiq::IoContext* ctx, const std::function<int()>& 
   int wait_ms = (ctx->reconnect_interval_ms < 0) ? 0 : ctx->reconnect_interval_ms;
   int max_ms = (ctx->reconnect_max_interval_ms < 0) ? 0 : ctx->reconnect_max_interval_ms;
 
+  WIQ_LOG_DEBUG("NOT_CONNECTED -> reconnect policy: retries=%d interval_ms=%d backoff=%.2f cap=%d", attempts, wait_ms, backoff, max_ms);
   for (int attempt = 1; attempt <= attempts; ++attempt) {
-    if (wait_ms > 0) std::this_thread::sleep_for(milliseconds(wait_ms));
+    if (wait_ms > 0) {
+      WIQ_LOG_TRACE("reconnect attempt %d/%d: sleep %d ms", attempt, attempts, wait_ms);
+      std::this_thread::sleep_for(milliseconds(wait_ms));
+    } else {
+      WIQ_LOG_TRACE("reconnect attempt %d/%d: no wait", attempt, attempts);
+    }
     (void)ctx->client->connect();
     rc = op();
-    if (rc != NOT_CONNECTED_RC) return rc; // success or different error
+    if (rc != NOT_CONNECTED_RC) {
+      WIQ_LOG_DEBUG("reconnect attempt %d/%d: operation returned %d", attempt, attempts, rc);
+      return rc; // success or different error
+    }
 
     // prepare next wait with backoff
     if (wait_ms > 0) {
@@ -208,6 +218,7 @@ static int call_with_reconnect(wiq::IoContext* ctx, const std::function<int()>& 
       wait_ms = next_ms;
     }
   }
+  WIQ_LOG_WARN("all reconnect attempts failed with NOT_CONNECTED");
   return rc;
 }
 
@@ -228,15 +239,26 @@ extern "C" {
 using IoHandle = void*;
 
 WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConfigPath) {
-  if (!jsonConfigPath) return nullptr;
+  if (!jsonConfigPath) {
+    WIQ_LOG_ERROR("CreateIoInstance: jsonConfigPath=nullptr");
+    return nullptr;
+  }
   std::string text;
-  if (!wiq::load_file(jsonConfigPath, text)) return nullptr;
+  if (!wiq::load_file(jsonConfigPath, text)) {
+    WIQ_LOG_ERROR("CreateIoInstance: cannot read config '%s'", jsonConfigPath);
+    return nullptr;
+  }
   nlohmann::json cfg;
-  try { cfg = nlohmann::json::parse(text); } catch (...) { return nullptr; }
+  try { cfg = nlohmann::json::parse(text); }
+  catch (...) {
+    WIQ_LOG_ERROR("CreateIoInstance: invalid JSON in '%s'", jsonConfigPath);
+    return nullptr;
+  }
 
   std::unique_ptr<wiq::IoContext> ctx(new wiq::IoContext());
   ctx->transport = cfg.value("transport", std::string("tcp"));
   if (!(ctx->transport == "tcp" || ctx->transport == "rtu")) {
+    WIQ_LOG_ERROR("invalid transport '%s' (expected tcp|rtu)", ctx->transport.c_str());
     return nullptr;
   }
   if (cfg.contains("tcp")) {
@@ -253,6 +275,9 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
   }
 
   ctx->client = wiq::make_client_for(ctx->transport, ctx->host, ctx->port);
+  WIQ_LOG_INFO("CreateIoInstance: transport=%s host=%s port=%d timeout_ms=%d retries=%d interval_ms=%d backoff=%.2f cap=%d",
+               ctx->transport.c_str(), ctx->host.c_str(), ctx->port, ctx->timeout_ms,
+               ctx->reconnect_retries, ctx->reconnect_interval_ms, ctx->reconnect_backoff, ctx->reconnect_max_interval_ms);
   if (ctx->client) ctx->client->set_timeout_ms(ctx->timeout_ms);
   // parse items
   if (!(cfg.contains("items") && cfg["items"].is_array() && !cfg["items"].empty())) {
