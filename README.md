@@ -9,6 +9,23 @@ Implements the WebIQ ioHandler SDK interface (`CreateIoInstance`, `SubscribeItem
 
 ## Quick Start
 
+TL;DR (find_package)
+
+```cmake
+cmake_minimum_required(VERSION 3.19)
+project(consumer LANGUAGES CXX)
+find_package(WebIQModbusIoHandler 0.2 CONFIG REQUIRED)
+add_executable(consumer main.cpp)
+target_link_libraries(consumer PRIVATE WebIQ::ioh_modbus)
+```
+
+Then configure with your package prefix on the path, e.g.:
+
+```bash
+export CMAKE_PREFIX_PATH=/opt/webiq${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}
+cmake -S . -B build && cmake --build build --config Release
+```
+
 - Use prebuilt package (recommended)
   1) Download a release archive (ZIP/TGZ) and extract to a prefix, e.g. `C:/deps/webiq` (Windows) or `/opt/webiq` (Linux).
   2) Point CMake to the prefix via `CMAKE_PREFIX_PATH` and link the target:

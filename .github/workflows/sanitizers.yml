@@ -2,6 +2,8 @@ name: Sanitizers (Linux)
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 4 1,15 * *'  # 每月 1 日與 15 日 04:00 UTC（雙週一次）
 
 jobs:
   asan-ubsan:
