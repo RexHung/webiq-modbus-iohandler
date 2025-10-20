@@ -1,0 +1,53 @@
+name: Coverage (Linux)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 5 * * *'  # 每日 05:00 UTC（Nightly）
+
+jobs:
+  gcovr:
+    name: gcovr (unit, x86_64)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gcovr
+        run: |
+          python3 -m pip install --upgrade pip
+          python3 -m pip install gcovr
+
+      - name: Configure (Debug + COVERAGE)
+        run: |
+          cmake -S . -B build-coverage \
+            -DWITH_LIBMODBUS=OFF -DWITH_TESTS=ON -DCMAKE_BUILD_TYPE=Debug -DCOVERAGE=ON
+
+      - name: Build
+        run: cmake --build build-coverage --config Debug --parallel
+
+      - name: Run unit tests
+        run: |
+          set -e
+          ctest --test-dir build-coverage -R '^unit_' --output-on-failure --timeout 120 \
+            || (echo 'Re-running unit tests verbosely...'; ctest --test-dir build-coverage -R '^unit_' -V --timeout 120; exit 1)
+
+      - name: Generate coverage reports (gcovr)
+        run: |
+          mkdir -p build-coverage/coverage
+          gcovr --root . --object-directory build-coverage \
+            --exclude 'tests/.*' --exclude 'doc/.*' --exclude 'examples/.*' \
+            --xml -o build-coverage/coverage/coverage.xml \
+            --html-details -o build-coverage/coverage/coverage.html \
+            --txt -o build-coverage/coverage/coverage.txt \
+            --print-summary
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-${{ github.sha }}
+          path: |
+            build-coverage/coverage/coverage.xml
+            build-coverage/coverage/coverage.html
+            build-coverage/coverage/coverage.txt

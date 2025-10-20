@@ -6,12 +6,26 @@ project(webiq_modbus_iohandler LANGUAGES CXX)
 # ----------------
 option(WITH_LIBMODBUS "Build with libmodbus backend" OFF)
 option(WITH_TESTS     "Build test targets" ON)
+option(COVERAGE       "Build with coverage flags (GNU/Clang)" OFF)
 
 # Keep CMake's standard flag aligned so ctest/CTest behave consistently
 set(BUILD_TESTING ${WITH_TESTS} CACHE BOOL "" FORCE)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# Optional coverage flags (Linux/GNU/Clang)
+if(COVERAGE)
+  if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    message(STATUS "COVERAGE=ON: enabling --coverage flags (-O0 -g)")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g --coverage")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0 -g --coverage")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} --coverage")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} --coverage")
+  else()
+    message(WARNING "COVERAGE requested but compiler ${CMAKE_CXX_COMPILER_ID} is not supported. Skipping.")
+  endif()
+endif()
 
 # ----------------
 # Main library
