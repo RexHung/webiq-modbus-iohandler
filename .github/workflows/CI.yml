@@ -312,9 +312,11 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Starting simulator on port $env:PORT"
-          Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py'
-          # Longer warm-up and readiness probe on Windows
-          $deadline = (Get-Date).AddSeconds(25)
+          $log = Join-Path $env:RUNNER_TEMP 'modbus_sim_windows.log'
+          $p = Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py' -RedirectStandardOutput $log -RedirectStandardError $log -PassThru
+          Write-Host "sim pid=$($p.Id) log=$log"
+          # Longer warm-up and readiness probe on Windows (up to 60s)
+          $deadline = (Get-Date).AddSeconds(60)
           $ok = $false
           do {
             Start-Sleep -Seconds 1
@@ -323,7 +325,11 @@ jobs:
               if ($t.TcpTestSucceeded) { $ok = $true }
             } catch { }
           } until ($ok -or (Get-Date) -gt $deadline)
-          if (-not $ok) { Write-Error "Simulator not reachable on port $env:PORT"; exit 1 }
+          if (-not $ok) {
+            Write-Error "Simulator not reachable on port $env:PORT"
+            if (Test-Path $log) { Write-Host "-- sim log tail --"; Get-Content $log -Tail 200 }
+            exit 1
+          }
 
       - name: Prepare CI config (Ubuntu)
         if: runner.os == 'Linux'
