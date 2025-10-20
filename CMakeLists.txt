@@ -199,18 +199,57 @@ endif()
 # ----------------
 # Install and packaging (CPack)
 # ----------------
-install(TARGETS ioh_modbus
+include(CMakePackageConfigHelpers)
+
+install(TARGETS ioh_modbus EXPORT WebIQModbusIoHandlerTargets
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
 
 install(DIRECTORY include/ DESTINATION include)
 
-# Basic CPack configuration (archives)
-set(CPACK_PACKAGE_NAME "webiq-modbus-iohandler")
-set(CPACK_PACKAGE_VENDOR "WebIQ Modbus IOHandler")
+# Install top-level docs into package root (best-effort)
+if(EXISTS "${CMAKE_SOURCE_DIR}/LICENSE")
+  install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" DESTINATION .)
+endif()
+if(EXISTS "${CMAKE_SOURCE_DIR}/README.md")
+  install(FILES "${CMAKE_SOURCE_DIR}/README.md" DESTINATION .)
+elseif(EXISTS "${CMAKE_SOURCE_DIR}/doc/README.md")
+  install(FILES "${CMAKE_SOURCE_DIR}/doc/README.md" DESTINATION . RENAME README.md)
+endif()
+
+# Generate and install CMake package config to support find_package()
+set(PKG_NAME WebIQModbusIoHandler)
+set(INSTALL_CONFIG_DIR lib/cmake/${PKG_NAME})
+
+install(EXPORT WebIQModbusIoHandlerTargets
+  FILE ${PKG_NAME}Targets.cmake
+  NAMESPACE WebIQ::
+  DESTINATION ${INSTALL_CONFIG_DIR})
+
+configure_package_config_file(
+  cmake/${PKG_NAME}Config.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/${PKG_NAME}Config.cmake
+  INSTALL_DESTINATION ${INSTALL_CONFIG_DIR}
+)
+
 if(NOT DEFINED CPACK_PACKAGE_VERSION)
   set(CPACK_PACKAGE_VERSION "0.2.0")
 endif()
+
+write_basic_package_version_file(
+  ${CMAKE_CURRENT_BINARY_DIR}/${PKG_NAME}ConfigVersion.cmake
+  VERSION ${CPACK_PACKAGE_VERSION}
+  COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+  ${CMAKE_CURRENT_BINARY_DIR}/${PKG_NAME}Config.cmake
+  ${CMAKE_CURRENT_BINARY_DIR}/${PKG_NAME}ConfigVersion.cmake
+  DESTINATION ${INSTALL_CONFIG_DIR})
+
+# Basic CPack configuration (archives)
+set(CPACK_PACKAGE_NAME "webiq-modbus-iohandler")
+set(CPACK_PACKAGE_VENDOR "WebIQ Modbus IOHandler")
 set(CPACK_GENERATOR "ZIP;TGZ")
 include(CPack)
