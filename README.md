@@ -1,5 +1,7 @@
 # WebIQ Modbus ioHandler Starter
 
+[![Sanitizers (Linux)](https://github.com/RexHung/webiq-modbus-iohandler/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/RexHung/webiq-modbus-iohandler/actions/workflows/sanitizers.yml)
+
 Custom ioHandler for WebIQ supporting Modbus TCP and RTU.
 
 ## Overview

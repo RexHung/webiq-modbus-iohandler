@@ -3,7 +3,7 @@ name: Sanitizers (Linux)
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 4 * * 0'  # 每週日 04:00 UTC，可視成本需求移除
+    - cron: '0 4 1,15 * *'  # 每月 1 日與 15 日 04:00 UTC（雙週一次）
 
 jobs:
   asan-ubsan:
@@ -38,4 +38,3 @@ jobs:
           set -e
           ctest --test-dir build-sanitizers -R '^unit_' --output-on-failure --timeout 120 \
             || (echo 'Re-running unit tests verbosely...'; ctest --test-dir build-sanitizers -R '^unit_' -V --timeout 120; exit 1)
-

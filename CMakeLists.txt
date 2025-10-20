@@ -234,7 +234,7 @@ configure_package_config_file(
 )
 
 if(NOT DEFINED CPACK_PACKAGE_VERSION)
-  set(CPACK_PACKAGE_VERSION "0.2.0")
+  set(CPACK_PACKAGE_VERSION "0.2.2")
 endif()
 
 write_basic_package_version_file(

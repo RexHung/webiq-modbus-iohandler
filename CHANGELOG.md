@@ -1,5 +1,14 @@
 # Changelog
 
+## v0.2.2 (2025-10-20)
+- Packaging/Release
+  - Include LICENSE/README in CPack archives; export CMake package config for `find_package`.
+  - Improve GitHub Release workflow for Ubuntu/Windows packaging.
+- CI
+  - Add Sanitizers (ASan/UBSan) workflow on Linux; schedule runs twice monthly and supports manual dispatch.
+- Docs
+  - Minor consistency updates across README and PR notes.
+
 ## v0.2.0 (2025-10-19)
 - API/Codec
   - Add 64-bit `double` support with configurable four-word ordering via `word_order` (ABCD/BADC/CDAB/DCBA).
