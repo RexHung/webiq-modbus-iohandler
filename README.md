@@ -7,6 +7,68 @@ Custom ioHandler for WebIQ supporting Modbus TCP and RTU.
 ## Overview
 Implements the WebIQ ioHandler SDK interface (`CreateIoInstance`, `SubscribeItems`, `ReadItem`, etc.) and adds Modbus TCP/RTU connectivity.
 
+## Quick Start
+
+- Use prebuilt package (recommended)
+  1) Download a release archive (ZIP/TGZ) and extract to a prefix, e.g. `C:/deps/webiq` (Windows) or `/opt/webiq` (Linux).
+  2) Point CMake to the prefix via `CMAKE_PREFIX_PATH` and link the target:
+
+```cmake
+cmake_minimum_required(VERSION 3.19)
+project(consumer LANGUAGES CXX)
+find_package(WebIQModbusIoHandler 0.2 CONFIG REQUIRED)
+add_executable(consumer main.cpp)
+target_link_libraries(consumer PRIVATE WebIQ::ioh_modbus)
+```
+
+```bash
+# Linux/macOS
+export CMAKE_PREFIX_PATH=/opt/webiq${CMAKE_PREFIX_PATH:+:$CMAKE_PREFIX_PATH}
+cmake -S . -B build && cmake --build build --config Release
+```
+
+```powershell
+# Windows (MSVC)
+$env:CMAKE_PREFIX_PATH = "C:\\deps\\webiq" + $(if ($env:CMAKE_PREFIX_PATH) { ";$env:CMAKE_PREFIX_PATH" } else { "" })
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Release
+```
+
+- Build from source without libmodbus (stub backend)
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWITH_LIBMODBUS=OFF
+cmake --build build --config Release
+```
+
+- Build from source with libmodbus
+  - Linux (Debian/Ubuntu):
+
+```bash
+sudo apt-get update && sudo apt-get install -y libmodbus-dev
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DWITH_LIBMODBUS=ON
+cmake --build build --config Release
+```
+
+  - Windows (vcpkg):
+
+```powershell
+# Install libmodbus via vcpkg
+git clone https://github.com/microsoft/vcpkg "$env:TEMP\vcpkg"; & "$env:TEMP\vcpkg\bootstrap-vcpkg.bat"
+$env:VCPKG_ROOT = "$env:TEMP\vcpkg"
+& "$env:VCPKG_ROOT\vcpkg.exe" install libmodbus:x64-windows
+
+# Configure with vcpkg toolchain and enable libmodbus
+cmake -S . -B build -G "Visual Studio 17 2022" -A x64 `
+  -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT\scripts\buildsystems\vcpkg.cmake" `
+  -DVCPKG_TARGET_TRIPLET=x64-windows -DWITH_LIBMODBUS=ON -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+```
+
+Notes
+- Runtime search path: ensure the built library directory is on `LD_LIBRARY_PATH` (Linux) or `PATH` (Windows) when running consumers.
+- Example consumer: see `examples/consumer-cmake` for a minimal `find_package` usage.
+
 ## Features:
 - CMake cross-platform build
 - JSON configuration for Modbus connection and items
