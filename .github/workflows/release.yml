@@ -41,7 +41,7 @@ jobs:
           if (-not $cm) { $cm = 'C:\Program Files\CMake\bin\cmake.exe' }
           echo "CMAKE_EXE=$cm" | Out-File -FilePath $env:GITHUB_ENV -Append
           & "$cm" -S . -B build -G "Visual Studio 17 2022" -A x64 `
-            -DWITH_LIBMODBUS=OFF -DWITH_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DCPACK_PACKAGE_VERSION=$($env:GITHUB_REF_NAME.TrimStart('v'))
+            -DWITH_LIBMODBUS=OFF -DWITH_TESTS=OFF -DCMAKE_BUILD_TYPE=Release -DCPACK_PACKAGE_VERSION=$($env:GITHUB_REF_NAME.TrimStart('v')) -DPACKAGE_PDB=ON
 
       - name: Build
         run: cmake --build build --config Release --parallel

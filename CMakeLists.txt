@@ -201,10 +201,17 @@ endif()
 # ----------------
 include(CMakePackageConfigHelpers)
 
+option(PACKAGE_PDB "Include MSVC PDB files in install/package" OFF)
+
 install(TARGETS ioh_modbus EXPORT WebIQModbusIoHandlerTargets
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)
+
+if(MSVC AND PACKAGE_PDB)
+  # Install MSVC program database files (if generated) to aid debugging
+  install(TARGETS ioh_modbus PDB DESTINATION bin)
+endif()
 
 install(DIRECTORY include/ DESTINATION include)
 
