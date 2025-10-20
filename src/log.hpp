@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdarg>
+#include <cstddef>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -42,8 +43,23 @@ inline bool parse_bool(const char* s, bool defv=false) {
   if (*s=='\0') return defv;
   if (s[0]=='1' && s[1]=='\0') return true;
   if (s[0]=='0' && s[1]=='\0') return false;
-  if (!strncasecmp(s, "true", 4)) return true;
-  if (!strncasecmp(s, "false", 5)) return false;
+  auto eq = [](char a, char b) {
+    if (a == b) return true;
+    if (a >= 'A' && a <= 'Z') a = static_cast<char>(a + 32);
+    if (b >= 'A' && b <= 'Z') b = static_cast<char>(b + 32);
+    return a == b;
+  };
+  auto starts = [&](const char* value, const char* target) {
+    std::size_t idx = 0;
+    while (target[idx]) {
+      if (value[idx] == '\0') return false;
+      if (!eq(value[idx], target[idx])) return false;
+      ++idx;
+    }
+    return true;
+  };
+  if (starts(s, "true")) return true;
+  if (starts(s, "false")) return false;
   return defv;
 }
 
@@ -102,12 +118,30 @@ inline void logf(Level lv, const char* file, int line, const char* fmt, ...) {
   va_end(ap);
 }
 
+template <typename... Args>
+inline void log_trace(const char* file, int line, const char* fmt, Args... args) {
+  logf(Level::TRACE, file, line, fmt, args...);
+}
+
+template <typename... Args>
+inline void log_debug(const char* file, int line, const char* fmt, Args... args) {
+  logf(Level::DEBUG, file, line, fmt, args...);
+}
+
+template <typename... Args>
+inline void log_info(const char* file, int line, const char* fmt, Args... args) {
+  logf(Level::INFO, file, line, fmt, args...);
+}
+
+template <typename... Args>
+inline void log_warn(const char* file, int line, const char* fmt, Args... args) {
+  logf(Level::WARN, file, line, fmt, args...);
+}
+
+template <typename... Args>
+inline void log_error(const char* file, int line, const char* fmt, Args... args) {
+  logf(Level::ERROR, file, line, fmt, args...);
+}
+
 } // namespace log
 } // namespace wiq
-
-#define WIQ_LOG_TRACE(fmt, ...) ::wiq::log::logf(::wiq::log::Level::TRACE, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define WIQ_LOG_DEBUG(fmt, ...) ::wiq::log::logf(::wiq::log::Level::DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define WIQ_LOG_INFO(fmt, ...)  ::wiq::log::logf(::wiq::log::Level::INFO,  __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define WIQ_LOG_WARN(fmt, ...)  ::wiq::log::logf(::wiq::log::Level::WARN,  __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-#define WIQ_LOG_ERROR(fmt, ...) ::wiq::log::logf(::wiq::log::Level::ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
-

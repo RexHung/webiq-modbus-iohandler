@@ -325,9 +325,21 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Starting simulator on port $env:PORT"
-          $log = Join-Path $env:RUNNER_TEMP 'modbus_sim_windows.log'
-          $p = Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py' -RedirectStandardOutput $log -RedirectStandardError $log -PassThru
-          Write-Host "sim pid=$($p.Id) log=$log"
+          $buildDir = Join-Path $env:GITHUB_WORKSPACE 'build'
+          $logsDir = Join-Path $buildDir 'ci_logs'
+          New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          $log = Join-Path $logsDir 'modbus_sim_windows.log'
+          $logErr = Join-Path $logsDir 'modbus_sim_windows.err.log'
+          $p = Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py' -WorkingDirectory $env:GITHUB_WORKSPACE -RedirectStandardOutput $log -RedirectStandardError $logErr -PassThru
+          Write-Host "sim pid=$($p.Id) log=$log err=$logErr"
+          Start-Sleep -Seconds 1
+          if ($p.HasExited) {
+            Write-Error "Modbus simulator exited immediately with code $($p.ExitCode)"
+            if (Test-Path $log) { Write-Host "-- sim log (full) --"; Get-Content $log }
+            if (Test-Path $logErr) { Write-Host "-- sim err (full) --"; Get-Content $logErr }
+            exit 1
+          }
           # Longer warm-up and readiness probe on Windows (up to 60s)
           $deadline = (Get-Date).AddSeconds(60)
           $ok = $false
@@ -335,14 +347,26 @@ jobs:
             Start-Sleep -Seconds 1
             try {
               $t = Test-NetConnection -ComputerName 127.0.0.1 -Port $env:PORT -WarningAction SilentlyContinue
-              if ($t.TcpTestSucceeded) { $ok = $true }
+              if ($t.TcpTestSucceeded) {
+                Write-Host "Simulator port reachable"
+                $ok = $true
+              }
             } catch { }
+            if ($p.HasExited) {
+              Write-Error "Modbus simulator terminated during readiness with code $($p.ExitCode)"
+              if (Test-Path $log) { Write-Host "-- sim log tail --"; Get-Content $log }
+              if (Test-Path $logErr) { Write-Host "-- sim err tail --"; Get-Content $logErr }
+              exit 1
+            }
           } until ($ok -or (Get-Date) -gt $deadline)
           if (-not $ok) {
             Write-Error "Simulator not reachable on port $env:PORT"
             if (Test-Path $log) { Write-Host "-- sim log tail --"; Get-Content $log -Tail 200 }
+            if (Test-Path $logErr) { Write-Host "-- sim err tail --"; Get-Content $logErr -Tail 200 }
             exit 1
           }
+          Write-Host "Simulator ready on port $env:PORT"
+          Start-Sleep -Seconds 2
 
       - name: Prepare CI config (Ubuntu)
         if: runner.os == 'Linux'
@@ -512,5 +536,6 @@ jobs:
             build/LastTest.log
             build/**/LastTest.log
             /tmp/modbus_sim.log
-            ${{ runner.temp }}\modbus_sim_windows.log
+            build/ci_logs/modbus_sim_windows.log
+            build/ci_logs/modbus_sim_windows.err.log
           retention-days: 7

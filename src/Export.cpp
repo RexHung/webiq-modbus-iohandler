@@ -4,6 +4,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cerrno>
 #include <string>
 #include <unordered_map>
 #include <memory>
@@ -37,6 +38,7 @@ public:
     // set timeouts
     set_timeout_ms(timeout_ms_);
     if (modbus_connect(ctx_) == -1) {
+      wiq::log::log_warn(__FILE__, __LINE__, "modbus_connect failed: %s", modbus_strerror(errno));
       modbus_free(ctx_); ctx_ = nullptr; return static_cast<int>(ModbusErr::IO_ERROR);
     }
     return 0;
@@ -194,18 +196,20 @@ static int call_with_reconnect(wiq::IoContext* ctx, const std::function<int()>& 
   int wait_ms = (ctx->reconnect_interval_ms < 0) ? 0 : ctx->reconnect_interval_ms;
   int max_ms = (ctx->reconnect_max_interval_ms < 0) ? 0 : ctx->reconnect_max_interval_ms;
 
-  WIQ_LOG_DEBUG("NOT_CONNECTED -> reconnect policy: retries=%d interval_ms=%d backoff=%.2f cap=%d", attempts, wait_ms, backoff, max_ms);
+  wiq::log::log_debug(__FILE__, __LINE__,
+                  "NOT_CONNECTED -> reconnect policy: retries=%d interval_ms=%d backoff=%.2f cap=%d",
+                  attempts, wait_ms, backoff, max_ms);
   for (int attempt = 1; attempt <= attempts; ++attempt) {
     if (wait_ms > 0) {
-      WIQ_LOG_TRACE("reconnect attempt %d/%d: sleep %d ms", attempt, attempts, wait_ms);
+      wiq::log::log_trace(__FILE__, __LINE__, "reconnect attempt %d/%d: sleep %d ms", attempt, attempts, wait_ms);
       std::this_thread::sleep_for(milliseconds(wait_ms));
     } else {
-      WIQ_LOG_TRACE("reconnect attempt %d/%d: no wait", attempt, attempts);
+      wiq::log::log_trace(__FILE__, __LINE__, "reconnect attempt %d/%d: no wait", attempt, attempts);
     }
     (void)ctx->client->connect();
     rc = op();
     if (rc != NOT_CONNECTED_RC) {
-      WIQ_LOG_DEBUG("reconnect attempt %d/%d: operation returned %d", attempt, attempts, rc);
+      wiq::log::log_debug(__FILE__, __LINE__, "reconnect attempt %d/%d: operation returned %d", attempt, attempts, rc);
       return rc; // success or different error
     }
 
@@ -218,7 +222,7 @@ static int call_with_reconnect(wiq::IoContext* ctx, const std::function<int()>& 
       wait_ms = next_ms;
     }
   }
-  WIQ_LOG_WARN("all reconnect attempts failed with NOT_CONNECTED");
+  wiq::log::log_warn(__FILE__, __LINE__, "all reconnect attempts failed with NOT_CONNECTED");
   return rc;
 }
 
@@ -240,25 +244,25 @@ using IoHandle = void*;
 
 WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConfigPath) {
   if (!jsonConfigPath) {
-    WIQ_LOG_ERROR("CreateIoInstance: jsonConfigPath=nullptr");
+    wiq::log::log_error(__FILE__, __LINE__, "CreateIoInstance: jsonConfigPath=nullptr");
     return nullptr;
   }
   std::string text;
   if (!wiq::load_file(jsonConfigPath, text)) {
-    WIQ_LOG_ERROR("CreateIoInstance: cannot read config '%s'", jsonConfigPath);
+    wiq::log::log_error(__FILE__, __LINE__, "CreateIoInstance: cannot read config '%s'", jsonConfigPath);
     return nullptr;
   }
   nlohmann::json cfg;
   try { cfg = nlohmann::json::parse(text); }
   catch (...) {
-    WIQ_LOG_ERROR("CreateIoInstance: invalid JSON in '%s'", jsonConfigPath);
+    wiq::log::log_error(__FILE__, __LINE__, "CreateIoInstance: invalid JSON in '%s'", jsonConfigPath);
     return nullptr;
   }
 
   std::unique_ptr<wiq::IoContext> ctx(new wiq::IoContext());
   ctx->transport = cfg.value("transport", std::string("tcp"));
   if (!(ctx->transport == "tcp" || ctx->transport == "rtu")) {
-    WIQ_LOG_ERROR("invalid transport '%s' (expected tcp|rtu)", ctx->transport.c_str());
+    wiq::log::log_error(__FILE__, __LINE__, "invalid transport '%s' (expected tcp|rtu)", ctx->transport.c_str());
     return nullptr;
   }
   if (cfg.contains("tcp")) {
@@ -275,9 +279,10 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
   }
 
   ctx->client = wiq::make_client_for(ctx->transport, ctx->host, ctx->port);
-  WIQ_LOG_INFO("CreateIoInstance: transport=%s host=%s port=%d timeout_ms=%d retries=%d interval_ms=%d backoff=%.2f cap=%d",
-               ctx->transport.c_str(), ctx->host.c_str(), ctx->port, ctx->timeout_ms,
-               ctx->reconnect_retries, ctx->reconnect_interval_ms, ctx->reconnect_backoff, ctx->reconnect_max_interval_ms);
+  wiq::log::log_info(__FILE__, __LINE__,
+                 "CreateIoInstance: transport=%s host=%s port=%d timeout_ms=%d retries=%d interval_ms=%d backoff=%.2f cap=%d",
+                 ctx->transport.c_str(), ctx->host.c_str(), ctx->port, ctx->timeout_ms,
+                 ctx->reconnect_retries, ctx->reconnect_interval_ms, ctx->reconnect_backoff, ctx->reconnect_max_interval_ms);
   if (ctx->client) ctx->client->set_timeout_ms(ctx->timeout_ms);
   // parse items
   if (!(cfg.contains("items") && cfg["items"].is_array() && !cfg["items"].empty())) {
