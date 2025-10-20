@@ -39,7 +39,7 @@ jobs:
           - { os: windows-latest, arch: win64,  with_tests: ON }
           - { os: windows-latest, arch: win32,  with_tests: ON }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Cache pip across jobs
       - name: Cache pip (Linux)
@@ -212,7 +212,7 @@ jobs:
       PORT: ${{ matrix.port }}
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install ccache (Linux)
         if: runner.os == 'Linux'
