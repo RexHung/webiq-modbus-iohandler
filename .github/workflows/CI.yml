@@ -513,6 +513,7 @@ except Exception as exc:
     print('socket smoke test failed:', exc)
     sys.exit(1)
 "@
+          $cmd = $cmd.Trim()
           python -c $cmd
 
       - name: Run E2E integration test (Linux)
