@@ -153,24 +153,33 @@ try:
 except TypeError:
     context = ModbusServerContext(devices=store, single=True)
 
+def _trace_connect(connected):
+    state = "connected" if connected else "disconnected"
+    print(f"Client {state}", flush=True)
+
+
 def main():
     # 允許以環境變數 PORT 覆寫預設 1502，利於 CI 並行測試
     port = int(os.getenv("PORT", "1502"))
     host = os.getenv("HOST", "127.0.0.1")
-    print(f"Simulator starting on port {port}", flush=True)
-    kwargs = {"context": context, "address": (host, port)}
+    print(f"Simulator starting on {host}:{port}", flush=True)
+    kwargs = {"context": context, "address": (host, port), "trace_connect": _trace_connect}
     try:
         StartTcpServer(**kwargs, allow_reuse_address=True)
     except TypeError as exc:
+        if "trace_connect" in str(exc):
+            kwargs.pop("trace_connect", None)
+            StartTcpServer(**kwargs, allow_reuse_address=True)
+            return
         if "allow_reuse_address" in str(exc):
             StartTcpServer(**kwargs)
             return
 
         # 舊版 pymodbus 2.x 僅支援 positional context 參數
         try:
-            StartTcpServer(context, address=("0.0.0.0", port), allow_reuse_address=True)
+            StartTcpServer(context, address=(host, port), allow_reuse_address=True)
         except TypeError:
-            StartTcpServer(context, address=("0.0.0.0", port))
+            StartTcpServer(context, address=(host, port))
 
 if __name__ == "__main__":
     main()
