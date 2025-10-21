@@ -62,17 +62,57 @@ ModbusServerContext = resolve(
     "pymodbus.datastore.context",
     "pymodbus.datastore.server",
 )
-ModbusSlaveContext = resolve(
-    "ModbusSlaveContext",
-    "pymodbus.datastore",
-    "pymodbus.datastore.context",
-    "pymodbus.datastore.store",
-)
+try:
+    ModbusSlaveContext = resolve(
+        "ModbusSlaveContext",
+        "pymodbus.datastore",
+        "pymodbus.datastore.context",
+        "pymodbus.datastore.store",
+    )
+except ImportError:
+    _DeviceContext = resolve(
+        "ModbusDeviceContext",
+        "pymodbus.datastore",
+        "pymodbus.datastore.context",
+    )
+
+    class ModbusSlaveContext(_DeviceContext):
+        """Compatibility shim for pymodbus 3.11+ removals."""
+
+        def __init__(self, *args, zero_mode=False, **kwargs):
+            self.zero_mode = kwargs.pop("zero_mode", zero_mode)
+            super().__init__(*args, **kwargs)
+
+        def getValues(self, func_code, address, count=1):  # type: ignore[override]
+            if self.zero_mode:
+                block = self.store[self.decode(func_code)]
+                return block.getValues(address, count)
+            return super().getValues(func_code, address, count)
+
+        def setValues(self, func_code, address, values):  # type: ignore[override]
+            if self.zero_mode:
+                block = self.store[self.decode(func_code)]
+                return block.setValues(address, values)
+            return super().setValues(func_code, address, values)
+
+        def validate(self, func_code, address, count=1):
+            if self.zero_mode:
+                block = self.store[self.decode(func_code)]
+                validator = getattr(block, "validate", None)
+                if validator:
+                    return validator(address, count)
+                return True
+            parent_validate = getattr(super(), "validate", None)
+            if parent_validate:
+                return parent_validate(func_code, address, count)
+            return True
+
 ModbusSequentialDataBlock = resolve(
     "ModbusSequentialDataBlock",
     "pymodbus.datastore",
     "pymodbus.datastore.store",
     "pymodbus.datastore.context",
+    "pymodbus.datastore.sequential",
 )
 import os
 import asyncio
@@ -102,7 +142,10 @@ store = ModbusSlaveContext(
 regs = float_to_regs(1.5)
 store.setValues(4, 100, regs)  # FC=4 input registers at 100/101
 
-context = ModbusServerContext(slaves=store, single=True)
+try:
+    context = ModbusServerContext(slaves=store, single=True)
+except TypeError:
+    context = ModbusServerContext(devices=store, single=True)
 
 def main():
     # 允許以環境變數 PORT 覆寫預設 1502，利於 CI 並行測試
