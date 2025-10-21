@@ -498,19 +498,21 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $cmd = "import os, socket, sys, time\n" +
-                 "host = '127.0.0.1'\n" +
-                 "port = int(os.environ['PORT'])\n" +
-                 "req = bytes.fromhex('0001000000060101000A0001')\n" +
-                 "try:\n" +
-                 "    with socket.create_connection((host, port), timeout=5) as sock:\n" +
-                 "        sock.settimeout(5)\n" +
-                 "        sock.sendall(req)\n" +
-                 "        data = sock.recv(12)\n" +
-                 "        print('modbus handshake bytes', data.hex())\n" +
-                 "except Exception as exc:\n" +
-                 "    print('socket smoke test failed:', exc)\n" +
-                 "    sys.exit(1)\n"
+          $cmd = @"
+import os, socket, sys
+host = '127.0.0.1'
+port = int(os.environ['PORT'])
+req = bytes.fromhex('0001000000060101000A0001')
+try:
+    with socket.create_connection((host, port), timeout=5) as sock:
+        sock.settimeout(5)
+        sock.sendall(req)
+        data = sock.recv(12)
+        print('modbus handshake bytes', data.hex())
+except Exception as exc:
+    print('socket smoke test failed:', exc)
+    sys.exit(1)
+"@
           python -c $cmd
 
       - name: Run E2E integration test (Linux)
