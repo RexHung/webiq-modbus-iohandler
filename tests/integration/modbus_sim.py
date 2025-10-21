@@ -11,12 +11,15 @@ The script offers two backends:
 from __future__ import annotations
 
 import asyncio
+import atexit
 import logging
 import os
+import signal
 import struct
 import sys
 import threading
 import traceback
+from typing import Callable, Optional
 
 # Decide which backend to use (default to the simple server on Windows runners).
 _USE_SIMPLE = os.getenv("SIMPLE_MODBUS")
@@ -36,6 +39,76 @@ def configure_logging() -> None:
 
 configure_logging()
 logger = logging.getLogger("modbus_sim")
+
+
+def _parse_heartbeat_interval() -> float:
+    raw = os.getenv("MODBUS_SIM_HEARTBEAT", "15")
+    try:
+        interval = float(raw)
+    except ValueError:
+        logger.warning("Invalid MODBUS_SIM_HEARTBEAT value %r; defaulting to 15s", raw)
+        return 15.0
+    if interval <= 0:
+        logger.info("Heartbeat disabled via MODBUS_SIM_HEARTBEAT=%s", raw)
+        return 0.0
+    return interval
+
+
+def _start_heartbeat() -> Optional[threading.Event]:
+    interval = _parse_heartbeat_interval()
+    if interval <= 0:
+        return None
+    stop_event = threading.Event()
+    logger.info("Heartbeat thread starting (interval=%ss)", interval)
+
+    def _beat() -> None:
+        while not stop_event.wait(interval):
+            logger.info("Heartbeat: simulator alive (threads=%s)", threading.active_count())
+
+    thread = threading.Thread(target=_beat, name="modbus-heartbeat", daemon=True)
+    thread.start()
+    return stop_event
+
+
+_signal_handlers_installed = False
+
+
+def _install_signal_logging() -> None:
+    global _signal_handlers_installed
+    if _signal_handlers_installed:
+        return
+    _signal_handlers_installed = True
+    signals_to_track: list[tuple[int, Optional[Callable]]]
+    signals_to_track = [(signal.SIGTERM, signal.getsignal(signal.SIGTERM))]
+    signals_to_track.append((signal.SIGINT, signal.getsignal(signal.SIGINT)))
+    if hasattr(signal, "SIGBREAK"):
+        sig = getattr(signal, "SIGBREAK")
+        signals_to_track.append((sig, signal.getsignal(sig)))
+
+    def _signal_name(sig: int) -> str:
+        name = signal.Signals(sig).name if hasattr(signal, "Signals") else None
+        return name or f"SIG{sig}"
+
+    for sig, previous in signals_to_track:
+        def _handler(signum: int, frame, *, _prev=previous, _sig=sig) -> None:  # type: ignore[no-untyped-def]
+            name = _signal_name(_sig)
+            logger.warning("Simulator received %s (%s)", signum, name)
+            if callable(_prev):
+                try:
+                    _prev(signum, frame)
+                except Exception:
+                    logger.exception("Previous handler for %s raised", name)
+                return
+            if _prev == signal.SIG_IGN:
+                return
+            raise SystemExit(128 + signum)
+
+        signal.signal(sig, _handler)
+
+    def _log_exit() -> None:
+        logger.info("Simulator process exiting (threads=%s)", threading.active_count())
+
+    atexit.register(_log_exit)
 
 
 def float_to_regs(value: float) -> list[int]:
@@ -180,14 +253,30 @@ if USE_SIMPLE:
     def run_simple_server(host: str, port: int) -> None:
         logger.info("Simple Modbus server starting on %s:%s", host, port)
         try:
+            _install_signal_logging()
+            heartbeat = _start_heartbeat()
             with SimpleModbusServer((host, port), ModbusTCPHandler) as server:
+                logger.info("Simple Modbus server entering serve_forever loop")
                 try:
                     server.serve_forever()
-                except Exception:  # pragma: no cover
-                    logger.exception("Simple Modbus server stopped due to exception")
+                except BaseException as exc:  # pragma: no cover - exercised in CI
+                    if isinstance(exc, (SystemExit, KeyboardInterrupt)):
+                        logger.warning("Simple Modbus server interrupted: %s", exc)
+                    else:
+                        logger.exception("Simple Modbus server stopped due to exception")
                     raise
                 finally:
-                    logger.info("Simple Modbus server shutting down")
+                    if heartbeat:
+                        heartbeat.set()
+                    shutdown_request = getattr(server, "_BaseServer__shutdown_request", None)
+                    is_set = getattr(server, "_BaseServer__is_shut_down", None)
+                    if hasattr(is_set, "is_set"):
+                        is_set = is_set.is_set()
+                    logger.info(
+                        "Simple Modbus server shutting down (shutdown_request=%s, shutdown_flag=%s)",
+                        shutdown_request,
+                        is_set,
+                    )
         except Exception:
             logger.exception("Failed to start Simple Modbus server")
             raise
