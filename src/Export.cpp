@@ -61,7 +61,9 @@ public:
     set_timeout_ms(timeout_ms_);
     if (modbus_connect(ctx_) == -1) {
 #if defined(_WIN32)
-      auto [wsa_err, wsa_msg] = last_socket_error();
+      auto wsa_info = last_socket_error();
+      int wsa_err = wsa_info.first;
+      const std::string& wsa_msg = wsa_info.second;
       wiq::log::log_warn(__FILE__, __LINE__,
                          "modbus_connect failed: %s (errno=%d, WSA=%d%s%s)",
                          modbus_strerror(errno), errno,
