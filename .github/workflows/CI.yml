@@ -499,21 +499,22 @@ jobs:
         shell: pwsh
         run: |
           $tmp = New-TemporaryFile
-          @"
-import os, socket, sys
-host = '127.0.0.1'
-port = int(os.environ['PORT'])
-req = bytes.fromhex('0001000000060101000A0001')
-try:
-    with socket.create_connection((host, port), timeout=5) as sock:
-        sock.settimeout(5)
-        sock.sendall(req)
-        data = sock.recv(12)
-        print('modbus handshake bytes', data.hex())
-except Exception as exc:
-    print('socket smoke test failed:', exc)
-    sys.exit(1)
-"@ | Set-Content -Encoding utf8 $tmp
+          $lines = @(
+            "import os, socket, sys",
+            "host = '127.0.0.1'",
+            "port = int(os.environ['PORT'])",
+            "req = bytes.fromhex('0001000000060101000A0001')",
+            "try:",
+            "    with socket.create_connection((host, port), timeout=5) as sock:",
+            "        sock.settimeout(5)",
+            "        sock.sendall(req)",
+            "        data = sock.recv(12)",
+            "        print('modbus handshake bytes', data.hex())",
+            "except Exception as exc:",
+            "    print('socket smoke test failed:', exc)",
+            "    sys.exit(1)"
+          )
+          Set-Content -Encoding utf8 $tmp $lines
           try {
             python $tmp
           } finally {
