@@ -323,8 +323,6 @@ jobs:
       - name: Start Modbus TCP simulator (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
-        env:
-          SIMPLE_MODBUS: '0'
         run: |
           Write-Host "Starting simulator on port $env:PORT"
           $buildDir = Join-Path $env:GITHUB_WORKSPACE 'build'

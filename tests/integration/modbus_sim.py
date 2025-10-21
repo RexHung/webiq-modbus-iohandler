@@ -11,6 +11,7 @@ The script offers two backends:
 from __future__ import annotations
 
 import asyncio
+import logging
 import os
 import struct
 import sys
@@ -22,6 +23,19 @@ _USE_SIMPLE = os.getenv("SIMPLE_MODBUS")
 if _USE_SIMPLE is None:
     _USE_SIMPLE = "1" if sys.platform.startswith("win") else "0"
 USE_SIMPLE = _USE_SIMPLE == "1"
+
+
+def configure_logging() -> None:
+    level_name = os.getenv("MODBUS_SIM_LOG", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(message)s",
+    )
+
+
+configure_logging()
+logger = logging.getLogger("modbus_sim")
 
 
 def float_to_regs(value: float) -> list[int]:
@@ -52,11 +66,11 @@ if USE_SIMPLE:
         def setup(self) -> None:  # pragma: no cover - exercised in CI
             self.request.settimeout(5.0)
             host, port = self.client_address
-            print(f"Client connected from {host}:{port}", flush=True)
+            logger.info("Client connected from %s:%s", host, port)
 
         def finish(self) -> None:  # pragma: no cover - exercised in CI
             host, port = self.client_address
-            print(f"Client disconnected from {host}:{port}", flush=True)
+            logger.info("Client disconnected from %s:%s", host, port)
 
         def _recv_exact(self, size: int) -> bytes | None:
             buffer = bytearray()
@@ -90,16 +104,14 @@ if USE_SIMPLE:
                     except OSError:
                         break
             except Exception:  # pragma: no cover
-                print("Simple server handler error:", flush=True)
-                traceback.print_exc()
+                logger.exception("Simple server handler error")
 
     class SimpleModbusServer(socketserver.ThreadingTCPServer):  # pragma: no cover
         allow_reuse_address = True
         daemon_threads = True
 
         def handle_error(self, request, client_address):
-            print(f"Simple server handle_error for {client_address}", flush=True)
-            traceback.print_exc()
+            logger.exception("Simple server handle_error for %s", client_address)
 
     def build_simple_response(pdu: bytes) -> bytes:
         fc = pdu[0]
@@ -166,20 +178,18 @@ if USE_SIMPLE:
         return _exception(fc, 0x01)
 
     def run_simple_server(host: str, port: int) -> None:
-        print(f"Simple Modbus server starting on {host}:{port}", flush=True)
+        logger.info("Simple Modbus server starting on %s:%s", host, port)
         try:
             with SimpleModbusServer((host, port), ModbusTCPHandler) as server:
                 try:
                     server.serve_forever()
                 except Exception:  # pragma: no cover
-                    print("Simple Modbus server stopped due to exception:", flush=True)
-                    traceback.print_exc()
+                    logger.exception("Simple Modbus server stopped due to exception")
                     raise
                 finally:
-                    print("Simple Modbus server shutting down", flush=True)
+                    logger.info("Simple Modbus server shutting down")
         except Exception:
-            print("Failed to start Simple Modbus server:", flush=True)
-            traceback.print_exc()
+            logger.exception("Failed to start Simple Modbus server")
             raise
 
 else:
@@ -303,6 +313,8 @@ if sys.platform.startswith("win"):
         print(f"Client {state}", flush=True)
 
     def run_pymodbus_server(host: str, port: int) -> None:
+        logger.info("pymodbus server selected on %s:%s", host, port)
+        logging.getLogger("pymodbus").setLevel(logging.DEBUG)
         store = build_pymodbus_store()
         try:
             context = ModbusServerContext(slaves=store, single=True)
@@ -317,20 +329,20 @@ if sys.platform.startswith("win"):
                 try:
                     StartTcpServer(**kwargs, allow_reuse_address=True)
                 finally:
-                    print("pymodbus server shutting down", flush=True)
+                    logger.info("pymodbus server shutting down (retry without trace_connect)")
                 return
             if "allow_reuse_address" in str(exc):
                 try:
                     StartTcpServer(**kwargs)
                 finally:
-                    print("pymodbus server shutting down", flush=True)
+                    logger.info("pymodbus server shutting down (retry without reuse flag)")
                 return
             try:
                 StartTcpServer(context, address=(host, port), allow_reuse_address=True)
             except TypeError:
                 StartTcpServer(context, address=(host, port))
         finally:
-            print("pymodbus server stopping", flush=True)
+            logger.info("pymodbus server stopping")
 
 
 def main() -> None:  # pragma: no cover - executed in CI
