@@ -498,7 +498,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $cmd = @"
+          $tmp = New-TemporaryFile
+          @"
 import os, socket, sys
 host = '127.0.0.1'
 port = int(os.environ['PORT'])
@@ -512,9 +513,12 @@ try:
 except Exception as exc:
     print('socket smoke test failed:', exc)
     sys.exit(1)
-"@
-          $cmd = $cmd.Trim()
-          python -c $cmd
+"@ | Set-Content -Encoding utf8 $tmp
+          try {
+            python $tmp
+          } finally {
+            Remove-Item $tmp -ErrorAction SilentlyContinue
+          }
 
       - name: Run E2E integration test (Linux)
         if: runner.os == 'Linux'
