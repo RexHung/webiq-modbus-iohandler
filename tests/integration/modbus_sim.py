@@ -150,8 +150,9 @@ except TypeError:
 def main():
     # 允許以環境變數 PORT 覆寫預設 1502，利於 CI 並行測試
     port = int(os.getenv("PORT", "1502"))
+    host = os.getenv("HOST", "127.0.0.1")
     print(f"Simulator starting on port {port}", flush=True)
-    kwargs = {"context": context, "address": ("0.0.0.0", port)}
+    kwargs = {"context": context, "address": (host, port)}
     try:
         StartTcpServer(**kwargs, allow_reuse_address=True)
     except TypeError as exc:
