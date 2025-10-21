@@ -286,14 +286,8 @@ else:
         "pymodbus.datastore.sequential",
     )
 
-    try:
-        import pymodbus as _pymodbus_mod  # type: ignore
-        _PYMODBUS_MAJOR = int(str(getattr(_pymodbus_mod, "__version__", "0")).split(".")[0])
-    except Exception:  # pragma: no cover - defensive fallback
-        _PYMODBUS_MAJOR = 0
-
-    if sys.platform.startswith("win") and _PYMODBUS_MAJOR < 3:
-        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+if sys.platform.startswith("win"):
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
     def build_pymodbus_store() -> object:
         return ModbusSlaveContext(
@@ -320,15 +314,23 @@ else:
         except TypeError as exc:
             if "trace_connect" in str(exc):
                 kwargs.pop("trace_connect", None)
-                StartTcpServer(**kwargs, allow_reuse_address=True)
+                try:
+                    StartTcpServer(**kwargs, allow_reuse_address=True)
+                finally:
+                    print("pymodbus server shutting down", flush=True)
                 return
             if "allow_reuse_address" in str(exc):
-                StartTcpServer(**kwargs)
+                try:
+                    StartTcpServer(**kwargs)
+                finally:
+                    print("pymodbus server shutting down", flush=True)
                 return
             try:
                 StartTcpServer(context, address=(host, port), allow_reuse_address=True)
             except TypeError:
                 StartTcpServer(context, address=(host, port))
+        finally:
+            print("pymodbus server stopping", flush=True)
 
 
 def main() -> None:  # pragma: no cover - executed in CI
