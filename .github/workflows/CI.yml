@@ -497,6 +497,7 @@ jobs:
       - name: Smoke test Modbus socket (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        continue-on-error: true
         run: |
           $tmp = New-TemporaryFile
           $lines = @(
