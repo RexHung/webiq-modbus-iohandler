@@ -323,6 +323,8 @@ jobs:
       - name: Start Modbus TCP simulator (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          SIMPLE_MODBUS: '0'
         run: |
           Write-Host "Starting simulator on port $env:PORT"
           $buildDir = Join-Path $env:GITHUB_WORKSPACE 'build'
@@ -333,6 +335,7 @@ jobs:
           $logErr = Join-Path $logsDir 'modbus_sim_windows.err.log'
           $p = Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py' -WorkingDirectory $env:GITHUB_WORKSPACE -RedirectStandardOutput $log -RedirectStandardError $logErr -PassThru
           Write-Host "sim pid=$($p.Id) log=$log err=$logErr"
+          "MODBUS_SIM_PID=$($p.Id)" | Out-File -FilePath $env:GITHUB_ENV -Append
           Start-Sleep -Seconds 1
           if ($p.HasExited) {
             Write-Error "Modbus simulator exited immediately with code $($p.ExitCode)"
@@ -493,6 +496,10 @@ jobs:
           Get-NetTCPConnection -LocalPort $env:PORT -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize
           Write-Host "== netstat snapshot =="
           netstat -ano | Select-String ":$env:PORT"
+          if ($env:MODBUS_SIM_PID) {
+            Write-Host "== Simulator process info (PID $env:MODBUS_SIM_PID) =="
+            Get-Process -Id $env:MODBUS_SIM_PID -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          }
 
       - name: Smoke test Modbus socket (Windows)
         if: runner.os == 'Windows'

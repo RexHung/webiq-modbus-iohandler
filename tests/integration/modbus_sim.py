@@ -15,6 +15,7 @@ import os
 import struct
 import sys
 import threading
+import traceback
 
 # Decide which backend to use (default to the simple server on Windows runners).
 _USE_SIMPLE = os.getenv("SIMPLE_MODBUS")
@@ -67,30 +68,38 @@ if USE_SIMPLE:
             return bytes(buffer)
 
         def handle(self) -> None:  # pragma: no cover - exercised in CI
-            while True:
-                header = self._recv_exact(7)
-                if not header:
-                    break
-                transaction_id = int.from_bytes(header[0:2], "big")
-                length = int.from_bytes(header[4:6], "big")
-                unit_id = header[6]
-                if length < 1:
-                    continue
-                pdu = self._recv_exact(length - 1)
-                if not pdu:
-                    break
-                response_pdu = build_simple_response(pdu)
-                response = struct.pack(
-                    ">HHHB", transaction_id, 0, len(response_pdu) + 1, unit_id
-                ) + response_pdu
-                try:
-                    self.request.sendall(response)
-                except OSError:
-                    break
+            try:
+                while True:
+                    header = self._recv_exact(7)
+                    if not header:
+                        break
+                    transaction_id = int.from_bytes(header[0:2], "big")
+                    length = int.from_bytes(header[4:6], "big")
+                    unit_id = header[6]
+                    if length < 1:
+                        continue
+                    pdu = self._recv_exact(length - 1)
+                    if not pdu:
+                        break
+                    response_pdu = build_simple_response(pdu)
+                    response = struct.pack(
+                        ">HHHB", transaction_id, 0, len(response_pdu) + 1, unit_id
+                    ) + response_pdu
+                    try:
+                        self.request.sendall(response)
+                    except OSError:
+                        break
+            except Exception:  # pragma: no cover
+                print("Simple server handler error:", flush=True)
+                traceback.print_exc()
 
     class SimpleModbusServer(socketserver.ThreadingTCPServer):  # pragma: no cover
         allow_reuse_address = True
         daemon_threads = True
+
+        def handle_error(self, request, client_address):
+            print(f"Simple server handle_error for {client_address}", flush=True)
+            traceback.print_exc()
 
     def build_simple_response(pdu: bytes) -> bytes:
         fc = pdu[0]
@@ -158,8 +167,20 @@ if USE_SIMPLE:
 
     def run_simple_server(host: str, port: int) -> None:
         print(f"Simple Modbus server starting on {host}:{port}", flush=True)
-        with SimpleModbusServer((host, port), ModbusTCPHandler) as server:
-            server.serve_forever()
+        try:
+            with SimpleModbusServer((host, port), ModbusTCPHandler) as server:
+                try:
+                    server.serve_forever()
+                except Exception:  # pragma: no cover
+                    print("Simple Modbus server stopped due to exception:", flush=True)
+                    traceback.print_exc()
+                    raise
+                finally:
+                    print("Simple Modbus server shutting down", flush=True)
+        except Exception:
+            print("Failed to start Simple Modbus server:", flush=True)
+            traceback.print_exc()
+            raise
 
 else:
     import importlib
