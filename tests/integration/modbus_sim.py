@@ -118,7 +118,13 @@ import os
 import asyncio
 import sys
 
-if sys.platform.startswith("win"):
+try:
+    import pymodbus as _pymodbus_mod  # type: ignore
+    _PYMODBUS_MAJOR = int(str(getattr(_pymodbus_mod, "__version__", "0")).split(".")[0])
+except Exception:  # pragma: no cover - defensive fallback
+    _PYMODBUS_MAJOR = 0
+
+if sys.platform.startswith("win") and _PYMODBUS_MAJOR < 3:
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 # 初始資料：
