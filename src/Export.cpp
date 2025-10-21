@@ -15,14 +15,36 @@
 #include "log.hpp"
 #include <thread>
 #include <chrono>
+#include <utility>
 
 #if defined(WITH_LIBMODBUS)
 # include <modbus.h>
+# if defined(_WIN32)
+#  include <winsock2.h>
+#  include <ws2tcpip.h>
+# endif
 #endif
 
 using nlohmann::json;
 
 namespace wiq {
+
+#if defined(_WIN32)
+static std::pair<int, std::string> last_socket_error() {
+  int err = WSAGetLastError();
+  if (err == 0) return {0, {}};
+  LPSTR msg_buf = nullptr;
+  DWORD flags = FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+  DWORD len = FormatMessageA(flags, nullptr, static_cast<DWORD>(err), 0, reinterpret_cast<LPSTR>(&msg_buf), 0, nullptr);
+  std::string message;
+  if (len != 0 && msg_buf) {
+    message.assign(msg_buf, len);
+    LocalFree(msg_buf);
+    while (!message.empty() && (message.back() == '\r' || message.back() == '\n')) message.pop_back();
+  }
+  return {err, message};
+}
+#endif
 
 #if defined(WITH_LIBMODBUS)
 class TcpModbusClient : public IModbusClient {
@@ -38,7 +60,18 @@ public:
     // set timeouts
     set_timeout_ms(timeout_ms_);
     if (modbus_connect(ctx_) == -1) {
-      wiq::log::log_warn(__FILE__, __LINE__, "modbus_connect failed: %s", modbus_strerror(errno));
+#if defined(_WIN32)
+      auto [wsa_err, wsa_msg] = last_socket_error();
+      wiq::log::log_warn(__FILE__, __LINE__,
+                         "modbus_connect failed: %s (errno=%d, WSA=%d%s%s)",
+                         modbus_strerror(errno), errno,
+                         wsa_err,
+                         wsa_msg.empty() ? "" : ", ",
+                         wsa_msg.empty() ? "" : wsa_msg.c_str());
+#else
+      wiq::log::log_warn(__FILE__, __LINE__, "modbus_connect failed: %s (errno=%d)",
+                         modbus_strerror(errno), errno);
+#endif
       modbus_free(ctx_); ctx_ = nullptr; return static_cast<int>(ModbusErr::IO_ERROR);
     }
     return 0;

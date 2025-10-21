@@ -469,7 +469,7 @@ jobs:
         run: |
           Write-Host "--- build/Release contents ---"
           Get-ChildItem build\Release | Format-Table -AutoSize
-          $bin = Join-Path $env:VCPKG_ROOT 'installed\x64-windows\bin'
+          $bin = Join-Path $env:VCPKG_ROOT "installed\${{ matrix.triplet }}\bin"
           if (Test-Path $bin) {
             Write-Host "Copying vcpkg runtime DLLs to build\\Release"
             Copy-Item "$bin\*.dll" build\Release -ErrorAction SilentlyContinue
@@ -482,6 +482,36 @@ jobs:
           } else {
             Write-Host "dumpbin not found; skipping dependency dump"
           }
+
+      - name: Diagnose simulator reachability (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Write-Host "== Test-NetConnection (Detailed) =="
+          Test-NetConnection -ComputerName 127.0.0.1 -Port $env:PORT -InformationLevel Detailed
+          Write-Host "== Get-NetTCPConnection (Listen state) =="
+          Get-NetTCPConnection -LocalPort $env:PORT -State Listen -ErrorAction SilentlyContinue | Format-Table -AutoSize
+          Write-Host "== netstat snapshot =="
+          netstat -ano | Select-String ":$env:PORT"
+
+      - name: Smoke test Modbus socket (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $cmd = "import os, socket, sys, time\n" +
+                 "host = '127.0.0.1'\n" +
+                 "port = int(os.environ['PORT'])\n" +
+                 "req = bytes.fromhex('0001000000060101000A0001')\n" +
+                 "try:\n" +
+                 "    with socket.create_connection((host, port), timeout=5) as sock:\n" +
+                 "        sock.settimeout(5)\n" +
+                 "        sock.sendall(req)\n" +
+                 "        data = sock.recv(12)\n" +
+                 "        print('modbus handshake bytes', data.hex())\n" +
+                 "except Exception as exc:\n" +
+                 "    print('socket smoke test failed:', exc)\n" +
+                 "    sys.exit(1)\n"
+          python -c $cmd
 
       - name: Run E2E integration test (Linux)
         if: runner.os == 'Linux'
