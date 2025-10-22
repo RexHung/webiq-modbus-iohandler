@@ -3,6 +3,7 @@
 ## 更新內容
 - `tests/integration/modbus_sim.py`: 將 `run_pymodbus_server` 與相關 helper 包在 `USE_SIMPLE` 判斷內，確保僅在啟用 pymodbus 後端時才解析 `resolve`，避免 Windows 預設 simple server 流程在模組載入期拋出 `NameError`。
 - `tests/integration/modbus_sim.py`: 維持跨平台 heartbeat、signal logging 與 FC3/FC4 回應修正；最新的 Windows run 仍可觀察到定期 heartbeat 與連線紀錄。
+- `tests/integration/test_modbus_simple.py`: 新增針對 simple server 的單元測試，覆蓋多暫存器讀取（FC3/FC4）與單暫存器寫入（FC6），確保 buffer 長度與資料寫入行為不會回歸。
 
 ## CI 訊息
 - Run `18701308350`（Windows win64）仍落在 readiness 階段：`run_pymodbus_server` 重構後，因 `USE_SIMPLE=True` 未定義 `resolve` 造成 `NameError`，已藉由本次修正封裝 helper 解決。
