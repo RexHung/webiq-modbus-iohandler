@@ -259,6 +259,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r tests/integration/requirements.txt
 
+      - name: Run simple server unit tests (Python)
+        run: python -m pytest tests/integration/test_modbus_simple.py
+
       # Linux deps: libmodbus via apt
       - name: Install libmodbus (Ubuntu)
         if: runner.os == 'Linux'
