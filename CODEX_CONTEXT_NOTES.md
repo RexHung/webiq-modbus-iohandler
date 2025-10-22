@@ -4,6 +4,7 @@
 - `tests/integration/modbus_sim.py`: 將 `run_pymodbus_server` 與相關 helper 包在 `USE_SIMPLE` 判斷內，確保僅在啟用 pymodbus 後端時才解析 `resolve`，避免 Windows 預設 simple server 流程在模組載入期拋出 `NameError`。
 - `tests/integration/modbus_sim.py`: 維持跨平台 heartbeat、signal logging 與 FC3/FC4 回應修正；最新的 Windows run 仍可觀察到定期 heartbeat 與連線紀錄。
 - `tests/integration/test_modbus_simple.py`: 新增針對 simple server 的單元測試，覆蓋多暫存器讀取（FC3/FC4）與單暫存器寫入（FC6），確保 buffer 長度與資料寫入行為不會回歸。
+- `tests/integration/requirements.txt`: 補上 `pytest>=8`，讓 CI 能執行新加入的 simple server 單元測試。
 - `.github/workflows/CI.yml`: 加入 `python -m pytest tests/integration/test_modbus_simple.py` 步驟，讓 CI 同步驗證 simple server 邏輯。
 
 ## CI 訊息
