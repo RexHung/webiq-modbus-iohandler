@@ -377,61 +377,68 @@ else:
                     return parent_validate(func_code, address, count)
                 return True
 
-    ModbusSequentialDataBlock = resolve(
-        "ModbusSequentialDataBlock",
-        "pymodbus.datastore",
-        "pymodbus.datastore.store",
-        "pymodbus.datastore.context",
-        "pymodbus.datastore.sequential",
-    )
+ModbusSequentialDataBlock = resolve(
+    "ModbusSequentialDataBlock",
+    "pymodbus.datastore",
+    "pymodbus.datastore.store",
+    "pymodbus.datastore.context",
+    "pymodbus.datastore.sequential",
+)
 
+_TRACE_CONNECT: Optional[Callable[[bool], None]] = None
 if sys.platform.startswith("win"):
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-
-    def build_pymodbus_store() -> object:
-        return ModbusSlaveContext(
-            di=ModbusSequentialDataBlock(0, list(DISCRETE)),
-            co=ModbusSequentialDataBlock(0, list(COILS)),
-            hr=ModbusSequentialDataBlock(0, list(HOLDING)),
-            ir=ModbusSequentialDataBlock(0, list(INPUT)),
-            zero_mode=True,
-        )
 
     def _trace_connect(connected: bool) -> None:
         state = "connected" if connected else "disconnected"
         print(f"Client {state}", flush=True)
 
-    def run_pymodbus_server(host: str, port: int) -> None:
-        logger.info("pymodbus server selected on %s:%s", host, port)
-        logging.getLogger("pymodbus").setLevel(logging.DEBUG)
-        store = build_pymodbus_store()
-        try:
-            context = ModbusServerContext(slaves=store, single=True)
-        except TypeError:
-            context = ModbusServerContext(devices=store, single=True)
-        kwargs = {"context": context, "address": (host, port), "trace_connect": _trace_connect}
-        try:
-            StartTcpServer(**kwargs, allow_reuse_address=True)
-        except TypeError as exc:
-            if "trace_connect" in str(exc):
-                kwargs.pop("trace_connect", None)
-                try:
-                    StartTcpServer(**kwargs, allow_reuse_address=True)
-                finally:
-                    logger.info("pymodbus server shutting down (retry without trace_connect)")
-                return
-            if "allow_reuse_address" in str(exc):
-                try:
-                    StartTcpServer(**kwargs)
-                finally:
-                    logger.info("pymodbus server shutting down (retry without reuse flag)")
-                return
+    _TRACE_CONNECT = _trace_connect
+
+
+def build_pymodbus_store() -> object:
+    return ModbusSlaveContext(
+        di=ModbusSequentialDataBlock(0, list(DISCRETE)),
+        co=ModbusSequentialDataBlock(0, list(COILS)),
+        hr=ModbusSequentialDataBlock(0, list(HOLDING)),
+        ir=ModbusSequentialDataBlock(0, list(INPUT)),
+        zero_mode=True,
+    )
+
+
+def run_pymodbus_server(host: str, port: int) -> None:
+    logger.info("pymodbus server selected on %s:%s", host, port)
+    logging.getLogger("pymodbus").setLevel(logging.DEBUG)
+    store = build_pymodbus_store()
+    try:
+        context = ModbusServerContext(slaves=store, single=True)
+    except TypeError:
+        context = ModbusServerContext(devices=store, single=True)
+    kwargs: dict[str, object] = {"context": context, "address": (host, port)}
+    if _TRACE_CONNECT is not None:
+        kwargs["trace_connect"] = _TRACE_CONNECT
+    try:
+        StartTcpServer(**kwargs, allow_reuse_address=True)
+    except TypeError as exc:
+        if "trace_connect" in str(exc) and "trace_connect" in kwargs:
+            kwargs.pop("trace_connect", None)
             try:
-                StartTcpServer(context, address=(host, port), allow_reuse_address=True)
-            except TypeError:
-                StartTcpServer(context, address=(host, port))
-        finally:
-            logger.info("pymodbus server stopping")
+                StartTcpServer(**kwargs, allow_reuse_address=True)
+            finally:
+                logger.info("pymodbus server shutting down (retry without trace_connect)")
+            return
+        if "allow_reuse_address" in str(exc):
+            try:
+                StartTcpServer(**kwargs)
+            finally:
+                logger.info("pymodbus server shutting down (retry without reuse flag)")
+            return
+        try:
+            StartTcpServer(context, address=(host, port), allow_reuse_address=True)
+        except TypeError:
+            StartTcpServer(context, address=(host, port))
+    finally:
+        logger.info("pymodbus server stopping")
 
 
 def main() -> None:  # pragma: no cover - executed in CI
