@@ -259,6 +259,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -r tests/integration/requirements.txt
 
+      - name: Run simple server unit tests (Python)
+        run: python -m pytest tests/integration/test_modbus_simple.py
+
       # Linux deps: libmodbus via apt
       - name: Install libmodbus (Ubuntu)
         if: runner.os == 'Linux'
@@ -319,30 +322,6 @@ jobs:
           if ! (echo > /dev/tcp/127.0.0.1/$PORT) >/dev/null 2>&1; then
             echo "ERROR: Simulator not reachable on port $PORT"; echo "-- sim log tail --"; tail -n 200 /tmp/modbus_sim.log || true; exit 1
           fi
-
-      - name: Start Modbus TCP simulator (Windows)
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          Write-Host "Starting simulator on port $env:PORT"
-          $log = Join-Path $env:RUNNER_TEMP 'modbus_sim_windows.log'
-          $p = Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py' -RedirectStandardOutput $log -RedirectStandardError $log -PassThru
-          Write-Host "sim pid=$($p.Id) log=$log"
-          # Longer warm-up and readiness probe on Windows (up to 60s)
-          $deadline = (Get-Date).AddSeconds(60)
-          $ok = $false
-          do {
-            Start-Sleep -Seconds 1
-            try {
-              $t = Test-NetConnection -ComputerName 127.0.0.1 -Port $env:PORT -WarningAction SilentlyContinue
-              if ($t.TcpTestSucceeded) { $ok = $true }
-            } catch { }
-          } until ($ok -or (Get-Date) -gt $deadline)
-          if (-not $ok) {
-            Write-Error "Simulator not reachable on port $env:PORT"
-            if (Test-Path $log) { Write-Host "-- sim log tail --"; Get-Content $log -Tail 200 }
-            exit 1
-          }
 
       - name: Prepare CI config (Ubuntu)
         if: runner.os == 'Linux'
@@ -445,7 +424,7 @@ jobs:
         run: |
           Write-Host "--- build/Release contents ---"
           Get-ChildItem build\Release | Format-Table -AutoSize
-          $bin = Join-Path $env:VCPKG_ROOT 'installed\x64-windows\bin'
+          $bin = Join-Path $env:VCPKG_ROOT "installed\${{ matrix.triplet }}\bin"
           if (Test-Path $bin) {
             Write-Host "Copying vcpkg runtime DLLs to build\\Release"
             Copy-Item "$bin\*.dll" build\Release -ErrorAction SilentlyContinue
@@ -467,20 +446,126 @@ jobs:
           ctest --test-dir build -R e2e --output-on-failure --timeout 120 \
             || (echo "Re-running E2E verbosely..."; ctest --test-dir build -R e2e -V --timeout 120; exit 1)
 
-      - name: Run E2E integration test (Windows)
+      - name: Run Windows integration suite
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $ok = $true
-          try {
-            ctest --test-dir build -C Release -R e2e --output-on-failure --timeout 120
-          } catch {
-            $ok = $false
+          $ErrorActionPreference = 'Stop'
+          function Show-SimLogs {
+            param(
+              [int]$Tail = 200
+            )
+            if (Test-Path $log) {
+              Write-Host "-- simulator stdout (tail) --"
+              Get-Content $log -Tail $Tail
+            }
+            if (Test-Path $logErr) {
+              Write-Host "-- simulator stderr (tail) --"
+              Get-Content $logErr -Tail $Tail
+            }
           }
-          if (-not $ok) {
-            Write-Host "Re-running E2E verbosely..."
-            ctest --test-dir build -C Release -R e2e -V --timeout 120
-            exit 1
+
+          $buildDir = Join-Path $env:GITHUB_WORKSPACE 'build'
+          $logsDir = Join-Path $buildDir 'ci_logs'
+          New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
+          New-Item -ItemType Directory -Force -Path $logsDir | Out-Null
+          $log = Join-Path $logsDir 'modbus_sim_windows.log'
+          $logErr = Join-Path $logsDir 'modbus_sim_windows.err.log'
+
+          Write-Host "Starting simulator on port $env:PORT"
+          $p = Start-Process -FilePath python -ArgumentList 'tests/integration/modbus_sim.py' -WorkingDirectory $env:GITHUB_WORKSPACE -RedirectStandardOutput $log -RedirectStandardError $logErr -PassThru
+          Write-Host "sim pid=$($p.Id) log=$log err=$logErr"
+          "MODBUS_SIM_PID=$($p.Id)" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+          $deadline = (Get-Date).AddSeconds(60)
+          $ready = $false
+          while ((Get-Date) -lt $deadline) {
+            if ($p.HasExited) {
+              Write-Error "Modbus simulator terminated during readiness with code $($p.ExitCode)"
+              Show-SimLogs -Tail 400
+              throw "Simulator exited prematurely"
+            }
+            try {
+              $probe = Test-NetConnection -ComputerName 127.0.0.1 -Port $env:PORT -WarningAction SilentlyContinue
+              if ($probe.TcpTestSucceeded) {
+                Write-Host "Simulator port reachable"
+                $ready = $true
+                break
+              }
+            } catch {
+              Write-Host "Probe attempt failed: $_"
+            }
+            Start-Sleep -Seconds 1
+          }
+          if (-not $ready) {
+            Write-Error "Simulator not reachable on port $env:PORT"
+            Show-SimLogs -Tail 400
+            throw "Simulator readiness probe failed"
+          }
+          Write-Host "Simulator ready on port $env:PORT"
+          Start-Sleep -Seconds 2
+
+          try {
+            Write-Host "== Test-NetConnection (Detailed) =="
+            Test-NetConnection -ComputerName 127.0.0.1 -Port $env:PORT -InformationLevel Detailed
+
+            Write-Host "== Get-NetTCPConnection (Listen state) =="
+            $tcp = Get-NetTCPConnection -LocalPort $env:PORT -State Listen -ErrorAction SilentlyContinue
+            if ($tcp) {
+              $tcp | Format-Table -AutoSize
+            } else {
+              Write-Host "(no listeners reported)"
+            }
+
+            Write-Host "== netstat snapshot =="
+            $netstat = netstat -ano | Select-String ":$env:PORT" -ErrorAction SilentlyContinue
+            if ($netstat) {
+              $netstat
+            } else {
+              Write-Host "(no netstat entries for port $env:PORT)"
+            }
+
+            Write-Host "== Smoke test Modbus socket =="
+            $tmp = New-TemporaryFile
+            try {
+              $lines = @(
+                "import os, socket, sys",
+                "host = '127.0.0.1'",
+                "port = int(os.environ['PORT'])",
+                "req = bytes.fromhex('0001000000060101000A0001')",
+                "try:",
+                "    with socket.create_connection((host, port), timeout=5) as sock:",
+                "        sock.settimeout(5)",
+                "        sock.sendall(req)",
+                "        data = sock.recv(12)",
+                "        print('modbus handshake bytes', data.hex())",
+                "except Exception as exc:",
+                "    print('socket smoke test failed:', exc)",
+                "    sys.exit(1)"
+              )
+              Set-Content -Encoding utf8 $tmp $lines
+              python $tmp
+              if ($LASTEXITCODE -ne 0) {
+                throw "Socket smoke test failed with exit code $LASTEXITCODE"
+              }
+            } finally {
+              Remove-Item $tmp -ErrorAction SilentlyContinue
+            }
+
+            Write-Host "== Run E2E integration test =="
+            ctest --test-dir build -C Release -R e2e --output-on-failure --timeout 120
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "Re-running E2E verbosely..."
+              ctest --test-dir build -C Release -R e2e -V --timeout 120
+              throw "ctest reported failures"
+            }
+          } finally {
+            if (-not $p.HasExited) {
+              Write-Host "Stopping simulator pid $($p.Id)"
+              Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+              Start-Sleep -Seconds 1
+            }
+            Show-SimLogs -Tail 400
           }
 
       - name: Show dependency info (Linux)
@@ -512,5 +597,6 @@ jobs:
             build/LastTest.log
             build/**/LastTest.log
             /tmp/modbus_sim.log
-            ${{ runner.temp }}\modbus_sim_windows.log
+            build/ci_logs/modbus_sim_windows.log
+            build/ci_logs/modbus_sim_windows.err.log
           retention-days: 7
