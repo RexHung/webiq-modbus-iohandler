@@ -1,32 +1,54 @@
-# Codex Context Log v0.1.2
+# Codex Context Log v0.1.3
 
 ## 更新內容
-- `.github/workflows/CI.yml`: 將 Windows integration 流程合併為單一 PowerShell 步驟，於同一 process 內啟動/監控 simulator、執行診斷、smoke test 與 ctest，結束時主動停止 simulator 並輸出尾端 log，避免 job object 於步驟結束時硬殺。
-- `tests/integration/modbus_sim.py`: 新增 heartbeat 啟動訊息並修正 FC3/FC4 回應 buffer 長度（`bytearray(2 + count * 2)`），修復多暫存器讀取時的 `IndexError`，同時保留先前 signal/heartbeat/atexit 記錄機制。
+- `tests/integration/modbus_sim.py`: 將 `run_pymodbus_server` 與相關 helper 包在 `USE_SIMPLE` 判斷內，確保僅在啟用 pymodbus 後端時才解析 `resolve`，避免 Windows 預設 simple server 流程在模組載入期拋出 `NameError`。
+- `tests/integration/modbus_sim.py`: 維持跨平台 heartbeat、signal logging 與 FC3/FC4 回應修正；最新的 Windows run 仍可觀察到定期 heartbeat 與連線紀錄。
 
 ## CI 訊息
-- Run `18692468108`（Windows win64）：新整合腳本成功保留 simulator 生命週期並捕捉 `IndexError: bytearray index out of range`（`build_simple_response`），`ctest` 因 `ReadItem('holding.temp') failed rc=-4` 失敗，log 亦紀錄多筆 heartbeat 與 client connect/disconnect。
-- Run `18701055969`（Windows win64）：套用 buffer 修正後，smoke test 取得 `modbus handshake bytes 00010000000401010100`，`ctest` 通過；`modbus_sim_windows.err.log` 僅剩連線紀錄，無例外堆疊。整體 workflow 仍因 Ubuntu job 的 `Start Modbus TCP simulator (Ubuntu)` 失敗而標記紅燈，需後續追蹤。
-- 先前 run `18692053877` 亦顯示 heartbeat 只印出一次後即缺失，證實舊流程在 readiness 後約 10~20 秒內遭 runner 強制終止。
+- Run `18701308350`（Windows win64）仍落在 readiness 階段：`run_pymodbus_server` 重構後，因 `USE_SIMPLE=True` 未定義 `resolve` 造成 `NameError`，已藉由本次修正封裝 helper 解決。
+- Run `18713819625`：Ubuntu、Windows x64/x86 全數通過。Windows `modbus_sim_windows.err.log` 僅有 heartbeat 與 client connect/disconnect，`ctest` 成功；Ubuntu job 同樣成功啟動 pymodbus 後端並完成 E2E。
 
 ## 新發現
-- heartbeat/signal 機制證實 simple server 在 readiness 之後仍存活至少 15 秒，沒有收到任何 `SIGTERM/SIGINT/SIGBREAK` 紀錄；先前提早終止的原因確定為 GitHub runner 在步驟結束時透過 job object 強制結束背景行程。
-- Windows `IndexError` 由 FC3/FC4 回應長度計算錯誤造成，修正後 `ReadItem` 已能正常回傳資料，E2E 測試通過。
-- 整合腳本尾端會印出 simulator log tail 與 `netstat` 結果，提供後續診斷依據。
-- Ubuntu integration 目前在 `Start Modbus TCP simulator (Ubuntu)` 失敗（尚未深入分析），需另開檢查以免 Linux pipeline 持續失敗。
+- Linux `pymodbus` 分支需要在模組載入階段保留 `resolve` 定義；將 helper 受 `USE_SIMPLE` 保護後，Windows simple server 不再解析多餘符號，兩邊流程皆正常啟動。
+- 最新成功 run 仍顯示 heartbeat 於啟動後 15 秒輸出一次，確認整合步驟可維持 simulator 存活至整個測試結束。
 
 ## 後續建議
+1. 監控後續 CI，確保 Windows 端長期穩定；若再次出現 readiness 失敗，可直接檢視綜合腳本輸出的診斷資訊與 log tail。
+2. 更新/撰寫針對 simple server 的自動化測試，覆蓋多暫存器讀寫與 heartbeat 行為，降低未來回歸風險。
+3. 若需擴充功能（例如支援 pymodbus 在 Windows 上運行），可考慮將 `_TRACE_CONNECT` 行為改為跨平台可選項並調整 `SIMPLE_MODBUS` 旗標預設值。
+
+## 附註與快速參考
+- Windows simulator log：`build/ci_logs/modbus_sim_windows.log(.err.log)`，整合腳本結束會自動印出尾端內容。
+- Ubuntu simulator log：`/tmp/modbus_sim.log`（由 nohup 產生），若遇到啟動失敗，可從 artifact `integration-logs-ubuntu-latest-*-port_1502.zip` 取得。
+- 近期關鍵 run：
+  - `18713819625` – 全平台通過（最新成功）。
+  - `18701308350` – Windows readiness 阻塞，觸發 `resolve` `NameError`（已修正）。
+  - `18701055969` – Windows `IndexError` 已於 v0.1.2 修復。
+
+---
+## v0.1.2 (歷史紀錄)
+
+### 更新內容
+- `.github/workflows/CI.yml`: 將 Windows integration 流程合併為單一 PowerShell 步驟，於同一 process 內啟動/監控 simulator、執行診斷、smoke test 與 ctest，結束時主動停止 simulator 並輸出尾端 log，避免 job object 於步驟結束時硬殺。
+- `tests/integration/modbus_sim.py`: 新增 heartbeat 啟動訊息並修正 FC3/4 回應 buffer 長度（`bytearray(2 + count * 2)`），修復多暫存器讀取時的 `IndexError`，同時保留先前 signal/heartbeat/atexit 記錄機制。
+
+### CI 訊息
+- Run `18692468108`（Windows win64）：新整合腳本成功保留 simulator 生命週期並捕捉 `IndexError: bytearray index out of range`（`build_simple_response`），`ctest` 因 `ReadItem('holding.temp') failed rc=-4` 失敗，log 亦紀錄多筆 heartbeat 與 client connect/disconnect。
+- Run `18701055969`（Windows win64）：套用 buffer 修正後，smoke test 取得 `modbus handshake bytes 00010000000401010100`，`ctest` 通過；`modbus_sim_windows.err.log` 僅剩連線紀錄，無例外堆疊。整體 workflow 當時因 Ubuntu job 的 `Start Modbus TCP simulator (Ubuntu)` 失敗而標紅。
+- 先前 run `18692053877` 亦顯示 heartbeat 只印出一次，證實舊流程在 readiness 後約 10~20 秒內遭 runner 強制終止。
+
+### 新發現
+- heartbeat/signal 機制證實 simple server 在 readiness 之後仍存活至少 15 秒，沒有收到任何 `SIGTERM/SIGINT/SIGBREAK` 訊息；先前提早終止的罪魁禍首是 GitHub runner 對背景行程的 job object。
+- Windows `IndexError` 由 FC3/4 回應長度計算錯誤造成，修正後 `ReadItem` 正常回傳資料，E2E 測試通過。
+- 整合腳本尾端會印出 simulator log tail 與 `netstat` 結果，提供後續診斷依據。
+- Ubuntu integration 當時在 `Start Modbus TCP simulator (Ubuntu)` 失敗（後續已於 v0.1.3 修正）。
+
+### 後續建議
 1. 監控下一輪 CI，確認 Windows job 持續綠燈並檢查是否仍有殘餘 job cleanup 問題。
-2. 調查 Ubuntu job 新增的失敗點（`Start Modbus TCP simulator (Ubuntu)`），檢視 `modbus_sim.log` 與最近變更是否影響 Linux 流程。
+2. 調查 Ubuntu job 新增的失敗點（`Start Modbus TCP simulator (Ubuntu)`），檢視 `/tmp/modbus_sim.log` 與最近變更是否影響 Linux 流程。
 3. 補上 simple server 的單元或整合測試（至少覆蓋多暫存器讀取/寫入），防止 buffer regression。
 4. 若需更細粒度偵錯，可在整合腳本增加 Wait-Process/診斷輸出，或評估在 Windows runner 上手動重現以驗證環境差異。
 
-## 附註與快速參考
-- Windows simulator log 仍位於 `build/ci_logs/modbus_sim_windows.log(.err.log)`，整合腳本結束會自動輸出尾端內容。
-- `MODBUS_SIM_PID` 依舊寫入 GitHub 環境，可於後續步驟或手動診斷時查詢；整合腳本會在 finally 強制 `Stop-Process`。
-- 關鍵 run：`18692468108`（捕捉 IndexError）與 `18701055969`（Windows E2E 通過，Linux job 失敗於 Ubuntu simulator 啟動）。
-
----
 ## v0.1.1 (歷史紀錄)
 
 ### 更新內容
@@ -35,7 +57,7 @@
 
 ### CI 訊息
 - Windows integration job 仍遭遇 `WinError 10061`；預期下一次 run 的 `modbus_sim_windows.log` 會額外輸出 signal/heartbeat 訊息，可用來對照 simulator 何時被終止。
-- Ubuntu integration job 仍維持正常。
+- Ubuntu integration job 當時維持正常。
 
 ### 新發現
 - 現有 log 僅看到正常 shutdown 訊息，推測 `serve_forever()` 收到 `SystemExit` 或類似訊號而結束，非自發例外；新增的 signal handler 與 heartbeat 可驗證此假設。
@@ -45,8 +67,8 @@
 ### 後續建議
 1. 觀察下一次 Windows CI 的 `modbus_sim_windows.log/.err.log`，留意 heartbeat 與 signal 訊息是否顯示在 readiness 之後即被外部訊號終止。
 2. 若確認是 step 結束造成的訊號，可試行以 PowerShell `Start-Job`、持續輪詢或切換到 pymodbus backend，避免背景程序被 job object 收斂。
-3. 儘快在 Windows runner 上手動啟動 `python tests/integration/modbus_sim.py` 並用 `socket.create_connection` 測試，排除防火牆／權限問題（需額外權限或請求互動式 session）。
-4. 若 Python simulator 後續仍不穩定，保留改用 libmodbus TCP server 作為 Windows 後端的替代方案。
+3. 儘快在 Windows runner 上直接啟動 `python tests/integration/modbus_sim.py` 並以 telnet/python 測試連線，排除防火牆／權限問題。
+4. 若 Python simulator 後續仍不穩定，評估改用 libmodbus C/C++ TCP server 作為 Windows 測試後端，保留 Python 模擬器作為 Linux fallback。
 
 ## v0.1.0 (歷史紀錄)
 
