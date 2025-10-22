@@ -214,7 +214,7 @@ if USE_SIMPLE:
                 return _exception(fc, 0x02)
             with STORE_LOCK:
                 values = registers[address : address + count]
-            payload = bytearray(1 + count * 2)
+            payload = bytearray(2 + count * 2)
             payload[0] = fc
             payload[1] = count * 2
             for idx, value in enumerate(values):
