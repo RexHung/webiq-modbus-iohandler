@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased (2025-10-23)
+- ASCII transport support
+  - Add Modbus ASCII stub client with frame silence/LRC handling and integrate transport selection in `Export.cpp`.
+  - Surface diagnostics counters via `diagnostics.reset/snapshot`, return JSON-encoded Modbus exceptions for reads/writes, and persist recent exception history.
+  - Expand tests: new unit cases for exception mapping/diagnostics plus ASCII end-to-end harness (`ctest -R e2e_ascii`); ship `tests/integration/ascii_sim.py` simulator.
+  - Fetch nlohmann_json via tarball to remove git dependency during CMake configure.
+
 ## v0.2.2 (2025-10-20)
 - Packaging/Release
   - Include LICENSE/README in CPack archives; export CMake package config for `find_package`.

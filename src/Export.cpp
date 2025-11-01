@@ -1,5 +1,7 @@
 #include "export.hpp"
 #include "IModbusClient.hpp"
+#include "AsciiModbusClient.hpp"
+#include "ModbusError.hpp"
 #include <nlohmann/json.hpp>
 #include <cstdio>
 #include <cstdlib>
@@ -12,6 +14,9 @@
 #include <fstream>
 #include <cmath>
 #include <set>
+#include <deque>
+#include <ctime>
+#include <cctype>
 #include "log.hpp"
 #include <thread>
 #include <chrono>
@@ -153,7 +158,7 @@ private:
 struct ItemCfg {
   std::string name;
   int unit_id{};
-  int function{}; // 1/2/3/4/5/6/15/16
+  int function{}; // 1/2/3/4/5/6/8/15/16
   int address{};
   int count{1};
   std::string type; // bool|int16|uint16|int32|uint32|float|double
@@ -162,6 +167,36 @@ struct ItemCfg {
   bool swap_words{false};
   int poll_ms{0};
   std::string word_order{"ABCD"}; // for 64-bit (double): ABCD|BADC|CDAB|DCBA
+  bool broadcast_allowed{false};
+};
+
+struct ExceptionLogEntry {
+  int function{};
+  int unit{};
+  std::uint8_t exception{};
+  std::string message;
+  std::chrono::system_clock::time_point timestamp;
+};
+
+struct DiagnosticsState {
+  std::uint64_t operations{0};
+  std::uint64_t retries{0};
+  std::uint64_t io_errors{0};
+  std::uint64_t timeouts{0};
+  std::uint64_t invalid_args{0};
+  std::uint64_t unsupported{0};
+  std::uint64_t broadcasts_sent{0};
+  std::uint64_t crc_errors{0};
+  std::uint64_t lrc_errors{0};
+  std::deque<ExceptionLogEntry> recent_exceptions;
+  void record_exception(const ExceptionLogEntry& e) {
+    recent_exceptions.push_front(e);
+    while (recent_exceptions.size() > 50) recent_exceptions.pop_back();
+  }
+  void reset() {
+    operations = retries = io_errors = timeouts = invalid_args = unsupported = broadcasts_sent = crc_errors = lrc_errors = 0;
+    recent_exceptions.clear();
+  }
 };
 
 struct IoContext {
@@ -170,12 +205,15 @@ struct IoContext {
   // tcp config
   std::string host; int port{1502}; int timeout_ms{1000};
   // transport
-  std::string transport; // tcp|rtu
+  std::string transport; // tcp|rtu|ascii
+  bool has_ascii_cfg{false};
+  AsciiConfig ascii_cfg{};
   // reconnect policy
   int reconnect_retries{1};            // number of reconnect attempts upon NOT_CONNECTED
   int reconnect_interval_ms{0};        // base wait before each reconnect attempt
   double reconnect_backoff{1.0};       // multiplier applied after each attempt (>=1.0)
   int reconnect_max_interval_ms{0};    // optional cap; 0 means uncapped
+  DiagnosticsState diagnostics;
 };
 
 static bool load_file(const char* path, std::string& out) {
@@ -246,6 +284,7 @@ static int call_with_reconnect(wiq::IoContext* ctx, const std::function<int()>& 
     } else {
       wiq::log::log_trace(__FILE__, __LINE__, "reconnect attempt %d/%d: no wait", attempt, attempts);
     }
+    if (ctx) ctx->diagnostics.retries += 1;
     (void)ctx->client->connect();
     rc = op();
     if (rc != NOT_CONNECTED_RC) {
@@ -266,17 +305,119 @@ static int call_with_reconnect(wiq::IoContext* ctx, const std::function<int()>& 
   return rc;
 }
 
-static std::unique_ptr<IModbusClient> make_client_for(const std::string& transport, const std::string& host, int port) {
+static std::unique_ptr<IModbusClient> make_client_for(const std::string& transport,
+                                                      const std::string& host,
+                                                      int port,
+                                                      const wiq::AsciiConfig* ascii_cfg) {
 #if defined(WITH_LIBMODBUS)
   if (transport == "tcp") {
     return std::unique_ptr<IModbusClient>(new TcpModbusClient(host, port));
   }
 #endif
+  if (transport == "ascii" && ascii_cfg) {
+    return wiq::make_ascii_client(*ascii_cfg);
+  }
   // fallback to stub
   return make_stub_client();
 }
 
 } // namespace wiq
+
+static bool write_str(char* out, int outSize, const std::string& s);
+
+static const char* message_for_rc(int rc) {
+  switch (rc) {
+    case 0: return "ok";
+    case static_cast<int>(wiq::ModbusErr::INVALID_ARG): return "invalid argument";
+    case static_cast<int>(wiq::ModbusErr::NOT_FOUND): return "not found";
+    case static_cast<int>(wiq::ModbusErr::IO_TIMEOUT): return "timeout";
+    case static_cast<int>(wiq::ModbusErr::IO_ERROR): return "io error";
+    case static_cast<int>(wiq::ModbusErr::NOT_CONNECTED): return "not connected";
+    case static_cast<int>(wiq::ModbusErr::UNSUPPORTED): return "unsupported";
+    case static_cast<int>(wiq::ModbusErr::PARSE_ERROR): return "parse error";
+    default: return "error";
+  }
+}
+
+static void record_success(wiq::IoContext* ctx) {
+  if (ctx) ctx->diagnostics.operations += 1;
+}
+
+static void record_error(wiq::IoContext* ctx, const wiq::ItemCfg& ic, int rc) {
+  if (!ctx) return;
+  ctx->diagnostics.operations += 1;
+  if (rc == static_cast<int>(wiq::ModbusErr::IO_TIMEOUT)) ctx->diagnostics.timeouts += 1;
+  else if (rc == static_cast<int>(wiq::ModbusErr::IO_ERROR)) ctx->diagnostics.io_errors += 1;
+  else if (rc == static_cast<int>(wiq::ModbusErr::INVALID_ARG)) ctx->diagnostics.invalid_args += 1;
+  else if (rc == static_cast<int>(wiq::ModbusErr::UNSUPPORTED)) ctx->diagnostics.unsupported += 1;
+  else if (rc == static_cast<int>(wiq::ModbusErr::CRC_ERROR)) ctx->diagnostics.crc_errors += 1;
+  else if (rc == static_cast<int>(wiq::ModbusErr::LRC_ERROR)) ctx->diagnostics.lrc_errors += 1;
+
+  if (wiq::is_modbus_exception(rc)) {
+    auto code = wiq::decode_modbus_exception(rc);
+    ctx->diagnostics.record_exception({ic.function, ic.unit_id, code, wiq::modbus_exception_to_string(code), std::chrono::system_clock::now()});
+    if (code == 4) ctx->diagnostics.io_errors += 1;
+    if (code == 3) ctx->diagnostics.invalid_args += 1;
+  }
+}
+
+static bool write_json(char* out, int outSize, const nlohmann::json& payload) {
+  return write_str(out, outSize, payload.dump());
+}
+
+static int emit_error_response(wiq::IoContext* ctx, const wiq::ItemCfg& ic, int rc, char* outJson, int outSize) {
+  record_error(ctx, ic, rc);
+  if (!outJson || outSize <= 0) return rc;
+  nlohmann::json err = {
+    {"error", {
+      {"code", rc},
+      {"message", message_for_rc(rc)}
+    }}
+  };
+  if (wiq::is_modbus_exception(rc)) {
+    auto code = wiq::decode_modbus_exception(rc);
+    err["error"]["exception"] = {
+      {"code", code},
+      {"name", wiq::modbus_exception_to_string(code)}
+    };
+  }
+  if (!ic.name.empty()) err["error"]["item"] = ic.name;
+  (void)write_json(outJson, outSize, err);
+  return rc;
+}
+
+static nlohmann::json diagnostics_snapshot_json(const wiq::DiagnosticsState& d) {
+  nlohmann::json snap;
+  snap["counters"] = {
+    {"operations", d.operations},
+    {"retries", d.retries},
+    {"io_errors", d.io_errors},
+    {"timeouts", d.timeouts},
+    {"invalid_args", d.invalid_args},
+    {"unsupported", d.unsupported},
+    {"broadcasts_sent", d.broadcasts_sent},
+    {"crc_errors", d.crc_errors},
+    {"lrc_errors", d.lrc_errors}
+  };
+  nlohmann::json ex = nlohmann::json::array();
+  for (const auto& e : d.recent_exceptions) {
+    std::time_t tt = std::chrono::system_clock::to_time_t(e.timestamp);
+    char buf[32];
+    if (std::strftime(buf, sizeof(buf), "%Y-%m-%dT%H:%M:%SZ", std::gmtime(&tt)) == 0) {
+      std::snprintf(buf, sizeof(buf), "%lld", static_cast<long long>(tt));
+    }
+    ex.push_back({
+      {"function", e.function},
+      {"unit", e.unit},
+      {"exception", e.exception},
+      {"name", wiq::modbus_exception_to_string(e.exception)},
+      {"message", e.message},
+      {"timestamp", std::string(buf)}
+    });
+  }
+  snap["exceptions"] = std::move(ex);
+  return snap;
+}
 
 extern "C" {
 
@@ -301,13 +442,36 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
 
   std::unique_ptr<wiq::IoContext> ctx(new wiq::IoContext());
   ctx->transport = cfg.value("transport", std::string("tcp"));
-  if (!(ctx->transport == "tcp" || ctx->transport == "rtu")) {
-    wiq::log::log_error(__FILE__, __LINE__, "invalid transport '%s' (expected tcp|rtu)", ctx->transport.c_str());
+  if (!(ctx->transport == "tcp" || ctx->transport == "rtu" || ctx->transport == "ascii")) {
+    wiq::log::log_error(__FILE__, __LINE__, "invalid transport '%s' (expected tcp|rtu|ascii)", ctx->transport.c_str());
     return nullptr;
   }
   if (cfg.contains("tcp")) {
     auto t = cfg["tcp"]; ctx->host = t.value("host", std::string("127.0.0.1")); ctx->port = t.value("port", 1502); ctx->timeout_ms = t.value("timeout_ms", 1000);
     if (ctx->port <= 0 || ctx->port > 65535) return nullptr;
+  }
+  if (ctx->transport == "ascii") {
+    ctx->has_ascii_cfg = true;
+    wiq::AsciiConfig asciiCfg;
+    if (cfg.contains("ascii") && cfg["ascii"].is_object()) {
+      auto a = cfg["ascii"];
+      asciiCfg.port = a.value("port", std::string("/dev/ttyS10"));
+      asciiCfg.baud = a.value("baud", 9600);
+      std::string parity = a.value("parity", std::string("E"));
+      if (parity.empty()) parity = "E";
+      char p = static_cast<char>(std::toupper(parity[0]));
+      if (p != 'N' && p != 'E' && p != 'O') return nullptr;
+      asciiCfg.parity = p;
+      asciiCfg.data_bits = a.value("data_bits", 7);
+      if (asciiCfg.data_bits != 7 && asciiCfg.data_bits != 8) return nullptr;
+      asciiCfg.stop_bits = a.value("stop_bits", 1);
+      if (asciiCfg.stop_bits != 1 && asciiCfg.stop_bits != 2) return nullptr;
+      asciiCfg.timeout_ms = a.value("timeout_ms", 1500);
+      asciiCfg.lrc_check = a.value("lrc_check", true);
+      asciiCfg.frame_silence_ms = a.value("frame_silence_ms", 5);
+    }
+    ctx->timeout_ms = asciiCfg.timeout_ms;
+    ctx->ascii_cfg = asciiCfg;
   }
   // reconnect policy (optional)
   if (cfg.contains("reconnect") && cfg["reconnect"].is_object()) {
@@ -318,23 +482,30 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
     ctx->reconnect_max_interval_ms = r.value("max_interval_ms", ctx->reconnect_max_interval_ms);
   }
 
-  ctx->client = wiq::make_client_for(ctx->transport, ctx->host, ctx->port);
+  ctx->client = wiq::make_client_for(ctx->transport, ctx->host, ctx->port,
+                                     ctx->has_ascii_cfg ? &ctx->ascii_cfg : nullptr);
   wiq::log::log_info(__FILE__, __LINE__,
                  "CreateIoInstance: transport=%s host=%s port=%d timeout_ms=%d retries=%d interval_ms=%d backoff=%.2f cap=%d",
                  ctx->transport.c_str(), ctx->host.c_str(), ctx->port, ctx->timeout_ms,
                  ctx->reconnect_retries, ctx->reconnect_interval_ms, ctx->reconnect_backoff, ctx->reconnect_max_interval_ms);
-  if (ctx->client) ctx->client->set_timeout_ms(ctx->timeout_ms);
+  if (ctx->client) {
+    ctx->client->set_timeout_ms(ctx->timeout_ms);
+    if (ctx->transport == "ascii" && ctx->has_ascii_cfg) {
+      ctx->client->set_frame_silence_ms(ctx->ascii_cfg.frame_silence_ms);
+    }
+    (void)ctx->client->connect();
+  }
   // parse items
   if (!(cfg.contains("items") && cfg["items"].is_array() && !cfg["items"].empty())) {
     return nullptr;
   }
 
   auto is_valid_type = [](const std::string& t)->bool{
-    static const std::set<std::string> ok = {"bool","int16","uint16","int32","uint32","float","double"};
+    static const std::set<std::string> ok = {"bool","int16","uint16","int32","uint32","float","double","diagnostic"};
     return ok.count(t) != 0;
   };
   auto is_valid_fc = [](int fc)->bool{
-    return fc==1||fc==2||fc==3||fc==4||fc==5||fc==6||fc==15||fc==16;
+    return fc==1||fc==2||fc==3||fc==4||fc==5||fc==6||fc==8||fc==15||fc==16;
   };
 
   for (auto& it : cfg["items"]) {
@@ -350,16 +521,25 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
     ic.swap_words = it.value("swap_words", false);
     ic.poll_ms = it.value("poll_ms", 0);
     ic.word_order = it.value("word_order", std::string("ABCD"));
+    ic.broadcast_allowed = it.value("broadcast_allowed", false);
 
     if (ic.name.empty()) return nullptr;
     if (!is_valid_fc(ic.function)) return nullptr;
     if (!is_valid_type(ic.type)) return nullptr;
-    if (ic.unit_id < 1 || ic.unit_id > 247) return nullptr;
+    if (ic.unit_id < 0 || ic.unit_id > 247) return nullptr;
+    if (ic.unit_id == 0) {
+      if (!(ic.function == 5 || ic.function == 6 || ic.function == 15 || ic.function == 16)) return nullptr;
+      if (!ic.broadcast_allowed) return nullptr;
+    }
     if (ic.address < 0) return nullptr;
     if (ic.count < 1) ic.count = 1;
     if (ic.function == 5 || ic.function == 6) ic.count = 1; // single
     if ((ic.function == 15 || ic.function == 16) && ic.count < 1) return nullptr;
     // type compatibility
+    if (ic.function == 8) {
+      ic.type = "diagnostic";
+      ic.count = 1;
+    }
     if ((ic.function == 1 || ic.function == 2 || ic.function == 5 || ic.function == 15) && ic.type != "bool") return nullptr;
     if ((ic.function == 3 || ic.function == 4 || ic.function == 6 || ic.function == 16) && ic.type == "bool") return nullptr;
     auto valid_word = [&](const std::string& w){ return w=="ABCD"||w=="BADC"||w=="CDAB"||w=="DCBA"; };
@@ -373,6 +553,7 @@ WIQ_IOH_API IoHandle CreateIoInstance(void* /*user_param*/, const char* jsonConf
     }
     if ((ic.type == std::string("double")) && ic.function == 6) return nullptr; // single reg not allowed for double
 
+    ic.broadcast_allowed = it.value("broadcast_allowed", false);
     ctx->items.emplace(ic.name, ic);
   }
 
@@ -419,18 +600,27 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
   if (it == ctx->items.end()) return static_cast<int>(wiq::ModbusErr::NOT_FOUND);
   const wiq::ItemCfg& ic = it->second;
 
+  if (ic.function == 8) {
+    auto snap = diagnostics_snapshot_json(ctx->diagnostics);
+    (void)write_json(outJson, outSize, snap);
+    record_success(ctx);
+    return 0;
+  }
+
   if (!ctx->client) return static_cast<int>(wiq::ModbusErr::NOT_CONNECTED);
 
   if (ic.function == 1) {
     int count = ic.count > 0 ? ic.count : 1;
     if (count == 1) {
       std::uint8_t v = 0; int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_coils(ic.unit_id, ic.address, 1, &v); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       return write_str(outJson, outSize, v ? "true" : "false") ? 0 : 0;
     } else {
       std::vector<std::uint8_t> buf(count);
       int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_coils(ic.unit_id, ic.address, count, buf.data()); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       json arr = json::array();
       for (int i = 0; i < count; ++i) arr.push_back(buf[i] != 0);
       return write_str(outJson, outSize, arr.dump()) ? 0 : 0;
@@ -440,12 +630,14 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
     int count = ic.count > 0 ? ic.count : 1;
     if (count == 1) {
       std::uint8_t v = 0; int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_discrete_inputs(ic.unit_id, ic.address, 1, &v); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       return write_str(outJson, outSize, v ? "true" : "false") ? 0 : 0;
     } else {
       std::vector<std::uint8_t> buf(count);
       int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_discrete_inputs(ic.unit_id, ic.address, count, buf.data()); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       json arr = json::array();
       for (int i = 0; i < count; ++i) arr.push_back(buf[i] != 0);
       return write_str(outJson, outSize, arr.dump()) ? 0 : 0;
@@ -455,7 +647,8 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
     if (ic.type == "float") {
       std::uint16_t rr[2] = { static_cast<std::uint16_t>(0), static_cast<std::uint16_t>(0) };
       int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_holding_regs(ic.unit_id, ic.address, 2, rr); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       std::uint32_t u = wiq::join_u32(rr[0], rr[1], ic.swap_words);
       float f; std::memcpy(&f, &u, 4);
       std::string s = std::to_string(static_cast<double>(f));
@@ -464,7 +657,8 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
     } else if (ic.type == "double") {
       std::uint16_t rr_dev[4] = { static_cast<std::uint16_t>(0), static_cast<std::uint16_t>(0), static_cast<std::uint16_t>(0), static_cast<std::uint16_t>(0) };
       int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_holding_regs(ic.unit_id, ic.address, 4, rr_dev); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       std::uint16_t rr_be[4]; wiq::reorder_words4(rr_dev, ic.word_order, rr_be);
       std::uint64_t u = wiq::join_u64_be(rr_be);
       double d; std::memcpy(&d, &u, 8);
@@ -475,7 +669,8 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
     int need = ic.count > 0 ? ic.count : 1;
     if (need == 1) {
       std::uint16_t r = 0; int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_holding_regs(ic.unit_id, ic.address, 1, &r); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       if (ic.type == "int16") {
         double val = wiq::apply_scale(static_cast<int16_t>(r), ic.scale, ic.offset);
         std::string s = std::to_string(val);
@@ -488,7 +683,8 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
     } else {
       std::vector<std::uint16_t> rr(need);
       int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_holding_regs(ic.unit_id, ic.address, need, rr.data()); });
-      if (rc != 0) return rc;
+      if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+      record_success(ctx);
       json arr = json::array();
       for (int i = 0; i < need; ++i) arr.push_back(rr[i]);
       return write_str(outJson, outSize, arr.dump()) ? 0 : 0;
@@ -498,7 +694,8 @@ WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int
     int need = ic.count > 0 ? ic.count : 1; if (need < 1) need = 1;
     std::vector<std::uint16_t> rr(need);
     int rc = call_with_reconnect(ctx, [&]{ return ctx->client->read_input_regs(ic.unit_id, ic.address, need, rr.data()); });
-    if (rc != 0) return rc;
+    if (rc != 0) return emit_error_response(ctx, ic, rc, outJson, outSize);
+    record_success(ctx);
     if (ic.type == "double" && need >= 4) {
       std::uint16_t rr_be[4] = { rr[0], rr.size()>1?rr[1]:static_cast<std::uint16_t>(0), rr.size()>2?rr[2]:static_cast<std::uint16_t>(0), rr.size()>3?rr[3]:static_cast<std::uint16_t>(0) };
       // rr is device order already; convert to BE first
@@ -537,46 +734,59 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
   auto it = ctx->items.find(name);
   if (it == ctx->items.end()) return static_cast<int>(wiq::ModbusErr::NOT_FOUND);
   const wiq::ItemCfg& ic = it->second;
+  if (ic.function == 8) return static_cast<int>(wiq::ModbusErr::UNSUPPORTED);
   if (!ctx->client) return static_cast<int>(wiq::ModbusErr::NOT_CONNECTED);
 
-  // parse simple JSON literal
+  bool broadcast_write = (ic.unit_id == 0) && (ic.function == 5 || ic.function == 6 || ic.function == 15 || ic.function == 16);
+  if (broadcast_write && !ic.broadcast_allowed) return static_cast<int>(wiq::ModbusErr::UNSUPPORTED);
+
   nlohmann::json v;
   try { v = nlohmann::json::parse(valueJson); } catch (...) { return static_cast<int>(wiq::ModbusErr::PARSE_ERROR); }
 
-  // Allow writes even when item is mapped with read FCs for convenience
-  if (ic.type == std::string("bool") && (ic.function == 1 || ic.function == 2)) { // FC1/2 -> write as FC5
+  auto finalize = [&](int rc) {
+    if (rc == 0) {
+      record_success(ctx);
+      if (broadcast_write) ctx->diagnostics.broadcasts_sent += 1;
+    } else {
+      record_error(ctx, ic, rc);
+    }
+    return rc;
+  };
+
+  if (ic.type == std::string("bool") && (ic.function == 1 || ic.function == 2)) {
     bool on = false;
     if (v.is_boolean()) on = v.get<bool>();
     else if (v.is_number_integer()) on = (v.get<int>() != 0);
     else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
-    return call_with_reconnect(ctx, [&]{ return ctx->client->write_single_coil(ic.unit_id, ic.address, on); });
+    return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_single_coil(ic.unit_id, ic.address, on); }));
   }
-  if (ic.function == 3) { // FC3 -> write as FC6/16 depending on type/count
+
+  if (ic.function == 3) {
     if (ic.type == std::string("float")) {
       if (!v.is_number()) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
       float f = static_cast<float>(v.get<double>());
       std::uint32_t u; std::memcpy(&u, &f, 4);
       std::uint16_t hi, lo; wiq::split_u32(u, ic.swap_words, hi, lo);
       std::uint16_t rr[2] = {hi, lo};
-      return call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr); });
-    } else { // int16 path
-      double d = 0.0; if (v.is_number()) d = v.get<double>(); else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
-      if (ic.scale == 0.0) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
-      double rawd = wiq::unscale(d, ic.scale, ic.offset);
-      int32_t rawi = static_cast<int32_t>(llround(rawd));
-      std::uint16_t reg = static_cast<std::uint16_t>(static_cast<int16_t>(rawi));
-      return call_with_reconnect(ctx, [&]{ return ctx->client->write_single_reg(ic.unit_id, ic.address, reg); });
+      return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr); }));
     }
+    double d = 0.0;
+    if (v.is_number()) d = v.get<double>(); else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+    if (ic.scale == 0.0) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+    double rawd = wiq::unscale(d, ic.scale, ic.offset);
+    int32_t rawi = static_cast<int32_t>(llround(rawd));
+    std::uint16_t reg = static_cast<std::uint16_t>(static_cast<int16_t>(rawi));
+    return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_single_reg(ic.unit_id, ic.address, reg); }));
   }
 
-  if (ic.function == 5) { // single coil
+  if (ic.function == 5) {
     bool on = false;
     if (v.is_boolean()) on = v.get<bool>();
     else if (v.is_number_integer()) on = (v.get<int>() != 0);
     else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
-    return call_with_reconnect(ctx, [&]{ return ctx->client->write_single_coil(ic.unit_id, ic.address, on); });
+    return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_single_coil(ic.unit_id, ic.address, on); }));
   }
-  if (ic.function == 15) { // multiple coils
+  if (ic.function == 15) {
     if (!v.is_array()) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
     int count = static_cast<int>(v.size());
     if (count <= 0) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
@@ -588,18 +798,19 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
       else if (e.is_number_integer()) buf[i] = (e.get<int>() != 0) ? 1 : 0;
       else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
     }
-    return call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_coils(ic.unit_id, ic.address, count, buf.data()); });
+    return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_coils(ic.unit_id, ic.address, count, buf.data()); }));
   }
-  if (ic.function == 6) { // single reg
+
+  if (ic.function == 6 && ic.type != std::string("float")) {
     double d = 0.0; if (v.is_number()) d = v.get<double>(); else return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
     if (ic.scale == 0.0) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
     double rawd = wiq::unscale(d, ic.scale, ic.offset);
     int32_t rawi = static_cast<int32_t>(llround(rawd));
     std::uint16_t reg = static_cast<std::uint16_t>(static_cast<int16_t>(rawi));
-    return call_with_reconnect(ctx, [&]{ return ctx->client->write_single_reg(ic.unit_id, ic.address, reg); });
+    return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_single_reg(ic.unit_id, ic.address, reg); }));
   }
+
   if (ic.function == 16 || (ic.function == 6 && ic.type == std::string("float"))) {
-    // write multiple regs; for float accept single number -> 2 regs
     if (v.is_number()) {
       double dv = v.get<double>();
       if (!std::isfinite(dv)) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
@@ -607,15 +818,15 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
         std::uint64_t u; std::memcpy(&u, &dv, 8);
         std::uint16_t rr_be[4]; wiq::split_u64_be(u, rr_be);
         std::uint16_t rr_dev[4]; wiq::reorder_words4(rr_be, ic.word_order, rr_dev);
-        return call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 4, rr_dev); });
-      } else {
-        float f = static_cast<float>(dv);
-        std::uint32_t u; std::memcpy(&u, &f, 4);
-        std::uint16_t hi, lo; wiq::split_u32(u, ic.swap_words, hi, lo);
-        std::uint16_t rr[2] = {hi, lo};
-        return call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr); });
+        return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 4, rr_dev); }));
       }
-    } else if (v.is_array()) {
+      float f = static_cast<float>(dv);
+      std::uint32_t u; std::memcpy(&u, &f, 4);
+      std::uint16_t hi, lo; wiq::split_u32(u, ic.swap_words, hi, lo);
+      std::uint16_t rr[2] = {hi, lo};
+      return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, 2, rr); }));
+    }
+    if (v.is_array()) {
       int count = static_cast<int>(v.size()); if (count <= 0) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
       if (ic.count > 0 && count != ic.count) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
       std::vector<std::uint16_t> regs(count);
@@ -625,11 +836,11 @@ WIQ_IOH_API int WriteItem(IoHandle h, const char* name, const char* valueJson) {
         if (x < 0 || x > 65535) return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
         regs[i] = static_cast<std::uint16_t>(x);
       }
-      return call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, count, regs.data()); });
-    } else {
-      return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
+      return finalize(call_with_reconnect(ctx, [&]{ return ctx->client->write_multiple_regs(ic.unit_id, ic.address, count, regs.data()); }));
     }
+    return static_cast<int>(wiq::ModbusErr::PARSE_ERROR);
   }
+
   return static_cast<int>(wiq::ModbusErr::UNSUPPORTED);
 }
 
@@ -649,6 +860,18 @@ WIQ_IOH_API int CallMethod(IoHandle h, const char* method, const char* paramsJso
   }
   if (m == "logger.set") {
     if (outJson) (void)std::snprintf(outJson, outSize, "{\"ok\":true}");
+    return 0;
+  }
+  if (m == "diagnostics.reset") {
+    ctx->diagnostics.reset();
+    if (outJson) (void)std::snprintf(outJson, outSize, "{\"reset\":true}");
+    return 0;
+  }
+  if (m == "diagnostics.snapshot") {
+    if (outJson) {
+      auto payload = diagnostics_snapshot_json(ctx->diagnostics);
+      (void)write_json(outJson, outSize, payload);
+    }
     return 0;
   }
   return static_cast<int>(wiq::ModbusErr::UNSUPPORTED);

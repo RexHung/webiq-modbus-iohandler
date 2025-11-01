@@ -16,6 +16,8 @@ enum class ModbusErr : int {
   NOT_CONNECTED  = -5,
   UNSUPPORTED    = -6,
   PARSE_ERROR    = -7,
+  CRC_ERROR      = -8,
+  LRC_ERROR      = -9,
 };
 
 class IModbusClient {
@@ -38,6 +40,12 @@ public:
   virtual int write_single_reg(int unit, int addr, std::uint16_t value) = 0;                 // FC6
   virtual int write_multiple_coils(int unit, int addr, int count, const std::uint8_t* v) = 0; // FC15
   virtual int write_multiple_regs(int unit, int addr, int count, const std::uint16_t* v) = 0; // FC16
+
+  // optional hooks for transports requiring frame timing/diagnostics
+  virtual void set_frame_silence_ms(int /*ms*/) {}
+  virtual int read_diagnostics(int /*unit*/, int /*addr*/, std::uint16_t* /*out*/, int /*count*/) {
+    return static_cast<int>(ModbusErr::UNSUPPORTED);
+  }
 };
 
 // Factory for a simple in-memory stub client usable without libmodbus

@@ -34,6 +34,7 @@ add_library(ioh_modbus SHARED
   src/Export.cpp
   src/ModbusIoHandler.cpp
   src/modbus/ModbusClient.cpp
+  src/modbus/AsciiModbusClient.cpp
 )
 target_include_directories(ioh_modbus PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -42,12 +43,7 @@ target_include_directories(ioh_modbus PUBLIC
 target_compile_definitions(ioh_modbus PRIVATE WIQ_IOH_BUILD)
 
 # JSON dependency (nlohmann/json)
-include(FetchContent)
-FetchContent_Declare(nlohmann_json
-  GIT_REPOSITORY https://github.com/nlohmann/json.git
-  GIT_TAG v3.11.3
-)
-FetchContent_MakeAvailable(nlohmann_json)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/nlohmann_json.cmake)
 target_link_libraries(ioh_modbus PRIVATE nlohmann_json::nlohmann_json)
 
 # Optional libmodbus backend
@@ -181,12 +177,25 @@ if(BUILD_TESTING)
   target_link_libraries(test_config_invalid_double PRIVATE ioh_modbus)
   add_test(NAME unit_config_invalid_double COMMAND $<TARGET_FILE:test_config_invalid_double>)
 
+  add_executable(test_exception_map tests/unit/test_exception_map.cpp)
+  target_link_libraries(test_exception_map PRIVATE ioh_modbus nlohmann_json::nlohmann_json)
+  add_test(NAME unit_exception_map COMMAND $<TARGET_FILE:test_exception_map>)
+
+  add_executable(test_diagnostics tests/unit/test_diagnostics.cpp)
+  target_link_libraries(test_diagnostics PRIVATE ioh_modbus nlohmann_json::nlohmann_json)
+  add_test(NAME unit_diagnostics COMMAND $<TARGET_FILE:test_diagnostics>)
+
   # E2E integration test binary
   add_executable(test_e2e tests/integration/test_e2e.cpp)
   target_include_directories(test_e2e PRIVATE include)
   target_link_libraries(test_e2e PRIVATE ioh_modbus)
   add_test(NAME e2e
            COMMAND $<TARGET_FILE:test_e2e> --config ${CMAKE_SOURCE_DIR}/config/ci.modbus.json)
+
+  add_executable(test_e2e_ascii tests/integration/test_e2e_ascii.cpp)
+  target_include_directories(test_e2e_ascii PRIVATE include)
+  target_link_libraries(test_e2e_ascii PRIVATE ioh_modbus)
+  add_test(NAME e2e_ascii COMMAND $<TARGET_FILE:test_e2e_ascii>)
 
   # Set runtime environment for all tests
   if(UNIX)
@@ -198,7 +207,7 @@ if(BUILD_TESTING)
       unit_api_fc4_array unit_api_fc3_array_2 unit_api_fc4_array_2
       unit_api_double_read_array unit_api_double_write_number
       unit_api_double_word_order_dcba unit_api_double_word_order_abcd unit_api_double_word_order_badc unit_api_double_word_order_cdab
-      unit_config_invalid_float_count unit_config_invalid_double e2e
+      unit_config_invalid_float_count unit_config_invalid_double unit_exception_map unit_diagnostics e2e e2e_ascii
       PROPERTIES ENVIRONMENT "${_LD}"
     )
   elseif(WIN32)
@@ -210,7 +219,7 @@ if(BUILD_TESTING)
       unit_api_fc4_array unit_api_fc3_array_2 unit_api_fc4_array_2
       unit_api_double_read_array unit_api_double_write_number
       unit_api_double_word_order_dcba unit_api_double_word_order_abcd unit_api_double_word_order_badc unit_api_double_word_order_cdab
-      unit_config_invalid_float_count unit_config_invalid_double e2e
+      unit_config_invalid_float_count unit_config_invalid_double unit_exception_map unit_diagnostics e2e e2e_ascii
       PROPERTIES ENVIRONMENT "${_PATH}"
     )
   endif()

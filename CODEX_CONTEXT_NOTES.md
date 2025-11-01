@@ -1,6 +1,9 @@
 # Codex Context Log v0.1.3
 
 ## 更新內容
+- `src/Export.cpp` / `AsciiModbusClient.cpp`: 新增 Modbus ASCII stub client 與 `diagnostics.reset/snapshot` API，所有讀寫皆可回傳 JSON 化的 Modbus 例外資訊並累計計數。
+- `tests/unit/test_exception_map.cpp`, `tests/unit/test_diagnostics.cpp`, `tests/integration/test_e2e_ascii.cpp`: 覆蓋例外映射、診斷統計與 ASCII 整合流程；`ctest -R e2e_ascii` 可驗證。
+- CMake 依賴改用 nlohmann_json tarball（`cmake/nlohmann_json.cmake`），無需 git 子模組即可配置。
 - `tests/integration/modbus_sim.py`: 將 `run_pymodbus_server` 與相關 helper 包在 `USE_SIMPLE` 判斷內，確保僅在啟用 pymodbus 後端時才解析 `resolve`，避免 Windows 預設 simple server 流程在模組載入期拋出 `NameError`。
 - `tests/integration/modbus_sim.py`: 維持跨平台 heartbeat、signal logging 與 FC3/FC4 回應修正；最新的 Windows run 仍可觀察到定期 heartbeat 與連線紀錄。
 - `tests/integration/test_modbus_simple.py`: 新增針對 simple server 的單元測試，覆蓋多暫存器讀取（FC3/FC4）與單暫存器寫入（FC6），確保 buffer 長度與資料寫入行為不會回歸。
