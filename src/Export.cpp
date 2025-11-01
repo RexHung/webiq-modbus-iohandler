@@ -323,8 +323,6 @@ static std::unique_ptr<IModbusClient> make_client_for(const std::string& transpo
 
 } // namespace wiq
 
-static bool write_str(char* out, int outSize, const std::string& s);
-
 static const char* message_for_rc(int rc) {
   switch (rc) {
     case 0: return "ok";
@@ -361,31 +359,6 @@ static void record_error(wiq::IoContext* ctx, const wiq::ItemCfg& ic, int rc) {
   }
 }
 
-static bool write_json(char* out, int outSize, const nlohmann::json& payload) {
-  return write_str(out, outSize, payload.dump());
-}
-
-static int emit_error_response(wiq::IoContext* ctx, const wiq::ItemCfg& ic, int rc, char* outJson, int outSize) {
-  record_error(ctx, ic, rc);
-  if (!outJson || outSize <= 0) return rc;
-  nlohmann::json err = {
-    {"error", {
-      {"code", rc},
-      {"message", message_for_rc(rc)}
-    }}
-  };
-  if (wiq::is_modbus_exception(rc)) {
-    auto code = wiq::decode_modbus_exception(rc);
-    err["error"]["exception"] = {
-      {"code", code},
-      {"name", wiq::modbus_exception_to_string(code)}
-    };
-  }
-  if (!ic.name.empty()) err["error"]["item"] = ic.name;
-  (void)write_json(outJson, outSize, err);
-  return rc;
-}
-
 static nlohmann::json diagnostics_snapshot_json(const wiq::DiagnosticsState& d) {
   nlohmann::json snap;
   snap["counters"] = {
@@ -417,6 +390,40 @@ static nlohmann::json diagnostics_snapshot_json(const wiq::DiagnosticsState& d) 
   }
   snap["exceptions"] = std::move(ex);
   return snap;
+}
+
+static bool write_str(char* out, int outSize, const std::string& s) {
+  if (!out || outSize <= 0) return false;
+  size_t len = s.size();
+  size_t n = (len >= static_cast<size_t>(outSize)) ? static_cast<size_t>(outSize - 1) : len;
+  std::memcpy(out, s.data(), n);
+  out[n] = '\0';
+  return n == len;
+}
+
+static bool write_json(char* out, int outSize, const nlohmann::json& payload) {
+  return write_str(out, outSize, payload.dump());
+}
+
+static int emit_error_response(wiq::IoContext* ctx, const wiq::ItemCfg& ic, int rc, char* outJson, int outSize) {
+  record_error(ctx, ic, rc);
+  if (!outJson || outSize <= 0) return rc;
+  nlohmann::json err = {
+    {"error", {
+      {"code", rc},
+      {"message", message_for_rc(rc)}
+    }}
+  };
+  if (wiq::is_modbus_exception(rc)) {
+    auto code = wiq::decode_modbus_exception(rc);
+    err["error"]["exception"] = {
+      {"code", code},
+      {"name", wiq::modbus_exception_to_string(code)}
+    };
+  }
+  if (!ic.name.empty()) err["error"]["item"] = ic.name;
+  (void)write_json(outJson, outSize, err);
+  return rc;
 }
 
 extern "C" {
@@ -582,15 +589,6 @@ WIQ_IOH_API int UnsubscribeItems(IoHandle h, const char** /*names*/, int /*count
   auto* ctx = reinterpret_cast<wiq::IoContext*>(h);
   if (!ctx) return static_cast<int>(wiq::ModbusErr::INVALID_ARG);
   return 0;
-}
-
-static bool write_str(char* out, int outSize, const std::string& s) {
-  if (!out || outSize <= 0) return false;
-  size_t len = s.size();
-  size_t n = (len >= static_cast<size_t>(outSize)) ? static_cast<size_t>(outSize - 1) : len;
-  std::memcpy(out, s.data(), n);
-  out[n] = '\0';
-  return n == len;
 }
 
 WIQ_IOH_API int ReadItem(IoHandle h, const char* name, /*out*/char* outJson, int outSize) {
