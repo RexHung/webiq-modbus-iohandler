@@ -6,6 +6,7 @@
   - Surface diagnostics counters via `diagnostics.reset/snapshot`, return JSON-encoded Modbus exceptions for reads/writes, and persist recent exception history.
   - Expand tests: new unit cases for exception mapping/diagnostics plus ASCII end-to-end harness (`ctest -R e2e_ascii`); ship `tests/integration/ascii_sim.py` simulator.
   - Fetch nlohmann_json via tarball to remove git dependency during CMake configure.
+  - Fix `write_str` linkage so Windows builds succeed (CI job `Integration (windows-latest, win64)`).
 
 ## v0.2.2 (2025-10-20)
 - Packaging/Release
